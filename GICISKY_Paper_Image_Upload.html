@@ -10,161 +10,176 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Arial', sans-serif;
             text-align: center;
             margin: 20px;
             background-color: #f8f9fa;
             color: #333;
         }
-
-        h1 {
+    
+        h1, h2 {
             color: #007bff;
-            margin-bottom: 1px;
+            margin-bottom: 10px;
+            font-size: 20px;
         }
-
+    
         label {
             font-weight: bold;
             margin-right: 5px;
             color: #555;
+            font-size: 14px;
+            width: 150px;
+            /* display: inline-block; */
         }
-
-        input[type="text"],
-        select {
+    
+        input,
+        select,
+        button {
             padding: 8px;
-            margin-bottom: 10px;
+            margin: 5px;
             border-radius: 5px;
             border: 1px solid #ccc;
+            font-size: 14px;
         }
-
+    
         button {
-            padding: 8px 20px;
             background-color: #007bff;
             color: #fff;
-            border: none;
-            border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.3s;
+            border: none;
         }
-
+    
         button:hover {
             background-color: #0056b3;
         }
-
-        canvas {
-            border: 1px solid black;
-        }
-
-        textarea {
-            padding: 5px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            width: 100%;
+    
+        .container {
             max-width: 400px;
             margin: 0 auto;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        #ble-upload {
-            padding: 10px;
-            background-color: #007bff;
-            color: #fff;
+            background: white;
+            padding: 15px;
             border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
         }
-
+    
+        .options {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .select-label {
+            text-align: left;
+        }
+        .file-upload {
+            text-align: left;
+        }
+        #myCanvas {
+            border: 1px solid black;
+            display: block;
+            margin: 10px auto;
+        }
+    
+        /* 숨겨진 textarea */
+        #pixelData {
+            display: none;
+        }
+    
+        #ble-upload {
+            margin-top: 5px;
+            padding: 10px;
+            border-radius: 5px;
+            background: #007bff;
+            color: #fff;
+        }
+    
         #ble-upload button {
-            background-color: #fff;
+            background-color: white;
             color: #007bff;
+            border: 1px solid #007bff;
         }
-
+    
         #ble-upload button:hover {
             background-color: #ddd;
         }
-
-        #log {
+        #status {
             text-align: left;
             padding: 10px;
-            border: 1px solid #ccc;
             border-radius: 5px;
             background-color: #f3f3f3;
             color: black;
+            font-size: 12px;
+            margin-top: 10px;
         }
+        #log {
+            text-align: left;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f3f3f3;
+            color: black;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+    
     </style>
 </head>
 
 <body>
     <div class="container">
         <h1>Gicisky BLE E-Paper Uploader</h1>
-        Select display or enter Raw Type from advertising data to create the image<br>
-        upload it then via the BLE part<br>
-        <label for="optionsSelect">Type:</label>
-        <select id="optionsSelect" onchange="updateParameters()">
-            <option value="Not Added">212x104 BW</option>
-            <option value="Not Added">212x104 BWR</option>
-            <option value="0030">296x128 BW</option>
-            <option value="0032">296x128 BWR</option>
-            <option value="0049">400x300 BW</option>
-            <option value="004B">400x300 BWR</option>
-            <option value="Not Added">640x384 BW</option>
-            <option value="Not Added">640x384 BWR</option>
-            <option value="Not Added">960x640 BW</option>
-            <option value="Not Added">960x640 BWR</option>
-            <option value="40A0">250x132 TFT</option>
-            <option value="Not Added">196x96 BW</option>
-            <option value="Not Added">196x96 BWR</option>
-            <option value="Not Added">640x480 BW</option>
-            <option value="Not Added">640x480 BWR</option>
-            <option value="4109">250x122 BW</option>
-            <option value="410B">250x122 BWR</option>
-            <option value="0129">800x480 BW</option>
-            <option value="012B">800x480 BWR</option>
-            <option value="Not Added">280x480 BW</option>
-            <option value="Not Added">280x480 BWR</option>
-        </select><br>
-        <!-- <label for="rawTypeInput">Raw Type:</label>
-        <input type="text" id="rawTypeInput" placeholder="Type" value="40A0">
-        <button onclick="decodeRaw()">Decode</button><br>
-        Type is first and last byte of advertising data, example: A01E810140 = 40A0<br><br> -->
-        <label for="widthInput">Width:</label>
-        <input type="text" id="widthInput" placeholder="Width" value="250">
-        <label for="heightInput">Height:</label>
-        <input type="text" id="heightInput" placeholder="Height" value="128">
-        <!-- <button onclick="createCanvas()">Create Canvas</button><br><br> -->
-        <label for="imageUpload">Upload Image:</label>
-        <input type="file" id="imageUpload" accept="image/*" onclick="resetImageSelector()" onchange="uploadImage()"><br><br>
-        <input onchange="getPixelData()" type="checkbox" checked="false" id="ditherrin">
-        <label for="ditherrin">Dithering</label><br>
-        <input type="checkbox" id="compressionCheckbox">
-        <label for="compressionCheckbox">Compression</label>
-        <input type="checkbox" id="secondColorCheckbox">
-        <label for="secondColorCheckbox">Second Color</label>
-        <input type="checkbox" id="mirrorCheckbox">
-        <label for="mirrorCheckbox">Mirror Image</label><br><br>
-        <canvas id="myCanvas" width="100" height="50"></canvas><br><br>
-        <!-- <label for="textInput">Enter Text:</label>
-        <input type="text" id="textInput" placeholder="Text" value="Hello">
-        <button onclick="addText()">Add Text</button><br><br>
-        <button onclick="getPixelData()">Get Pixel Data</button><br><br> -->
-        <textarea id="pixelData" rows="4" cols="10"></textarea>
+    
+        <!-- 라벨 타입 선택 -->
+        <div class="select-label">
+            <label for="optionsSelect">1. 라벨 타입 선택</label>
+            <select id="optionsSelect" onchange="updateParameters()">
+                <option value="410B">250x122 BWR</option>
+                <option value="40A0">250x132 TFT</option>
+            </select>
+        </div>
+    
+        <!-- Width & Height 설정 -->
+        <div style="display: none;">
+            <label for="widthInput">Width:</label>
+            <input type="text" id="widthInput" value="250" style="width: 50px;">
+            <label for="heightInput">Height:</label>
+            <input type="text" id="heightInput" value="128" style="width: 50px;">
+        </div>
+    
+        <!-- 체크박스 옵션 -->
+        <div class="options" style="display: none;">
+            <label><input type="checkbox" id="ditherrin"> Dithering</label>
+            <label><input type="checkbox" id="compressionCheckbox"> Compression</label>
+            <label><input type="checkbox" id="secondColorCheckbox"> Second Color</label>
+            <label><input type="checkbox" id="mirrorCheckbox"> Mirror</label>
+        </div>
+    
+        <!-- 이미지 업로드 -->
+        <div class="file-upload">
+            <label for="imageUpload">2. 이미지 선택</label>
+            <input type="file" id="imageUpload" accept="image/*" onclick="resetImageSelector()" onchange="uploadImage()">
+        </div>
+    
+        <!-- 캔버스 -->
+        <canvas id="myCanvas" width="250" height="128"></canvas>
+    
+        <!-- 숨겨진 textarea -->
+        <textarea id="pixelData"></textarea>
+
+        <!-- BLE 업로드 섹션 -->
         <div id="ble-upload">
-            <h2>BLE Upload</h2>
-            <button id="connectbutton" type="button" onclick="preConnect();">Connect</button>
-            <button type="button" onclick="reConnect();">Reconnect</button>
-            <button type="button" onclick="document.getElementById('log').innerHTML = '';">Clear Log</button>
+            <button id="connectbutton" onclick="preConnect();">3. 연결</button>
+            <button onclick="reConnect();">다시 연결</button>
+            <button onclick="document.getElementById('log').innerHTML = '';">로그 정리</button>
             <br><br>
-            <button type="button" onclick="sendimg(document.getElementById('pixelData').value);">Upload Image</button>
-            <br><br>
-            <!-- <input type="text" id="cmdTXT" value="01">
-            <button type="button" onclick="sendcmd(document.getElementById(&quot;cmdTXT&quot;).value);">Send Debug
-                CMD</button>
-            <br> -->
+            <button onclick="sendimg(document.getElementById('pixelData').value);">4. 이미지 전송</button>
             <div id="status">Upload status</div>
             <div id="log">Logs:</div>
         </div>
     </div>
+    
+
     <script>
         function createCanvas() {
             var width = parseInt(document.getElementById('widthInput').value);
@@ -321,6 +336,7 @@
         }
 
         function doAll() {
+            //updateParameters();
             createCanvas();
             //addText();
             getPixelData();
@@ -351,7 +367,7 @@
             console.log("Display Mirror: " + singleDoubleMirror);
             console.log("Display Compression: " + canDoCompression);
 
-
+            document.getElementById('ditherrin').checked = false;
             if (canDoCompression)
                 document.getElementById('compressionCheckbox').checked = true;
             else
@@ -408,16 +424,16 @@
 
             switch (dispPtype) {
                 case 0:// TFT
-                    document.getElementById('mirrorCheckbox').checked = true;
+                    document.getElementById('mirrorCheckbox').checked = false;
                     break;
                 case 1:// EPA
-                    document.getElementById('mirrorCheckbox').checked = true;
+                    document.getElementById('mirrorCheckbox').checked = false;
                     break;
                 case 2:// EPA1
                     document.getElementById('mirrorCheckbox').checked = false;
                     break;
                 case 3:// EPA2
-                    document.getElementById('mirrorCheckbox').checked = true;
+                    document.getElementById('mirrorCheckbox').checked = false;
                     break;
             }
             switch (availColors) {
@@ -591,7 +607,7 @@
         function disconnect() {
             resetVariables();
             addLog('Disconnected.');
-            document.getElementById("connectbutton").innerHTML = 'Connect';
+            document.getElementById("connectbutton").innerHTML = '3. 연결';
         }
 
         function handleNotify(data) {
@@ -643,7 +659,7 @@
                     return Theservice.getCharacteristic(0xFEF1);
                 }).then(characteristic => {
                     addLog('> Found write characteristic');
-                    document.getElementById("connectbutton").innerHTML = 'Disconnect';
+                    document.getElementById("connectbutton").innerHTML = '연결 해제';
                     writeCharacteristic = characteristic;
                     return writeCharacteristic.startNotifications().then(() => {
                         writeCharacteristic.addEventListener('characteristicvaluechanged', event => {
@@ -747,6 +763,7 @@
         }
 
         window.onload = function () {
+            updateParameters();
             doAll();
         }
         function uploadImage() {
