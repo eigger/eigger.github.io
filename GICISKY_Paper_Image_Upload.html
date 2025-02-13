@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gicisky BLE E-Paper Uploader</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            margin: 20px;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        h1 {
+            color: #007bff;
+            margin-bottom: 1px;
+        }
+
+        label {
+            font-weight: bold;
+            margin-right: 5px;
+            color: #555;
+        }
+
+        input[type="text"],
+        select {
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 8px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        canvas {
+            border: 1px solid black;
+        }
+
+        textarea {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        #ble-upload {
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 10px;
+        }
+
+        #ble-upload button {
+            background-color: #fff;
+            color: #007bff;
+        }
+
+        #ble-upload button:hover {
+            background-color: #ddd;
+        }
+
+        #log {
+            text-align: left;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f3f3f3;
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Gicisky BLE E-Paper Uploader</h1>
+        Select display or enter Raw Type from advertising data to create the image<br>
+        upload it then via the BLE part<br>
+        <label for="optionsSelect">Type:</label>
+        <select id="optionsSelect" onchange="updateParameters()">
+            <option value="Not Added">212x104 BW</option>
+            <option value="Not Added">212x104 BWR</option>
+            <option value="0030">296x128 BW</option>
+            <option value="0032">296x128 BWR</option>
+            <option value="0049">400x300 BW</option>
+            <option value="004B">400x300 BWR</option>
+            <option value="Not Added">640x384 BW</option>
+            <option value="Not Added">640x384 BWR</option>
+            <option value="Not Added">960x640 BW</option>
+            <option value="Not Added">960x640 BWR</option>
+            <option value="40A0">250x132 TFT</option>
+            <option value="Not Added">196x96 BW</option>
+            <option value="Not Added">196x96 BWR</option>
+            <option value="Not Added">640x480 BW</option>
+            <option value="Not Added">640x480 BWR</option>
+            <option value="4109">250x122 BW</option>
+            <option value="410B">250x122 BWR</option>
+            <option value="0129">800x480 BW</option>
+            <option value="012B">800x480 BWR</option>
+            <option value="Not Added">280x480 BW</option>
+            <option value="Not Added">280x480 BWR</option>
+        </select><br>
+        <!-- <label for="rawTypeInput">Raw Type:</label>
+        <input type="text" id="rawTypeInput" placeholder="Type" value="40A0">
+        <button onclick="decodeRaw()">Decode</button><br>
+        Type is first and last byte of advertising data, example: A01E810140 = 40A0<br><br> -->
+        <label for="widthInput">Width:</label>
+        <input type="text" id="widthInput" placeholder="Width" value="250">
+        <label for="heightInput">Height:</label>
+        <input type="text" id="heightInput" placeholder="Height" value="128">
+        <!-- <button onclick="createCanvas()">Create Canvas</button><br><br> -->
+        <label for="imageUpload">Upload Image:</label>
+        <input type="file" id="imageUpload" accept="image/*" onclick="resetImageSelector()" onchange="uploadImage()"><br><br>
+        <input onchange="getPixelData()" type="checkbox" checked="false" id="ditherrin">
+        <label for="ditherrin">Dithering</label><br>
+        <input type="checkbox" id="compressionCheckbox">
+        <label for="compressionCheckbox">Compression</label>
+        <input type="checkbox" id="secondColorCheckbox">
+        <label for="secondColorCheckbox">Second Color</label>
+        <input type="checkbox" id="mirrorCheckbox">
+        <label for="mirrorCheckbox">Mirror Image</label><br><br>
+        <canvas id="myCanvas" width="100" height="50"></canvas><br><br>
+        <!-- <label for="textInput">Enter Text:</label>
+        <input type="text" id="textInput" placeholder="Text" value="Hello">
+        <button onclick="addText()">Add Text</button><br><br>
+        <button onclick="getPixelData()">Get Pixel Data</button><br><br> -->
+        <textarea id="pixelData" rows="4" cols="10"></textarea>
+        <div id="ble-upload">
+            <h2>BLE Upload</h2>
+            <button id="connectbutton" type="button" onclick="preConnect();">Connect</button>
+            <button type="button" onclick="reConnect();">Reconnect</button>
+            <button type="button" onclick="document.getElementById('log').innerHTML = '';">Clear Log</button>
+            <br><br>
+            <button type="button" onclick="sendimg(document.getElementById('pixelData').value);">Upload Image</button>
+            <br><br>
+            <!-- <input type="text" id="cmdTXT" value="01">
+            <button type="button" onclick="sendcmd(document.getElementById(&quot;cmdTXT&quot;).value);">Send Debug
+                CMD</button>
+            <br> -->
+            <div id="status">Upload status</div>
+            <div id="log">Logs:</div>
+        </div>
+    </div>
+    <script>
+        function createCanvas() {
+            var width = parseInt(document.getElementById('widthInput').value);
+            var height = parseInt(document.getElementById('heightInput').value);
+            var canvas = document.getElementById('myCanvas');
+            canvas.width = width;
+            canvas.height = height;
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        function addText() {
+            var canvas = document.getElementById('myCanvas');
+            var ctx = canvas.getContext('2d');
+            var text = document.getElementById('textInput').value;
+            var fontSize = 72;
+            var maxWidth = canvas.width - 20;
+            var x = canvas.width / 2;
+            var y = canvas.height / 2;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'black';
+
+            do {
+                fontSize--;
+                ctx.font = fontSize + 'px Arial';
+            } while (ctx.measureText(text).width > maxWidth && fontSize > 0);
+
+            ctx.fillText(text, x, y);
+            var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
+            if (secondColorEnabled) {
+                ctx.fillStyle = 'red';
+                ctx.fillText(text, x, y + 40);
+            }
+            getPixelData();
+        }
+
+        function buf2hex(buffer) {
+            return [...new Uint8Array(buffer)]
+                .map(x => x.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
+        function getPixelData() {
+            if (document.getElementById('ditherrin').checked)
+                applyDithering();
+            var compressionEnabled = document.getElementById('compressionCheckbox').checked;
+            var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
+            var mirrorEnabled = document.getElementById('mirrorCheckbox').checked;
+
+            var canvas = document.getElementById('myCanvas');
+            var ctx = canvas.getContext('2d');
+            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            if (mirrorEnabled) {
+                var tempCanvas = document.createElement('canvas');
+                var tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+
+                tempCtx.translate(canvas.width, 0);
+                tempCtx.scale(-1, 1);
+                tempCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height);
+                imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+            }
+
+            var pixels = imageData.data;
+            var byteData = [];
+            var byteDataRed = [];
+            var currentByte = 0;
+            var currentByteRed = 0;
+            var bitPosition = 7;
+
+            for (var x = 0; x < canvas.width; x++) {
+                for (var y = 0; y < canvas.height; y++) {
+                    var curr = ((y * canvas.width) + x) * 4;
+                    var r = pixels[curr];
+                    var g = pixels[curr + 1];
+                    var b = pixels[curr + 2];
+                    var luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    if (luminance > 128) {
+                        currentByte |= (1 << bitPosition);
+                    }
+                    if (r > 170 && g < 170) {
+                        currentByteRed |= (1 << bitPosition);
+                    }
+                    bitPosition--;
+                    if (bitPosition < 0) {
+                        byteData.push(currentByte);
+                        byteDataRed.push(currentByteRed);
+                        currentByte = 0;
+                        currentByteRed = 0;
+                        bitPosition = 7;
+                    }
+                }
+            }
+
+            if (bitPosition !== 7) {
+                byteData.push(currentByte);
+                byteDataRed.push(currentByteRed);
+            }
+
+            var byteDataCompressed = [];
+            var pixelDataTextarea = document.getElementById('pixelData');
+
+            if (compressionEnabled) {
+                var currentPosi = 0;
+                var byte_per_line = canvas.height / 8;
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                for (var i = 0; i < canvas.width; i += 1) {
+                    byteDataCompressed.push(0x75);
+                    byteDataCompressed.push(byte_per_line + 7);
+                    byteDataCompressed.push(byte_per_line);
+                    byteDataCompressed.push(0x00);
+                    byteDataCompressed.push(0x00);
+                    byteDataCompressed.push(0x00);
+                    byteDataCompressed.push(0x00);
+                    for (var b = 0; b < byte_per_line; b++) {
+                        byteDataCompressed.push(byteData[currentPosi++]);
+                    }
+                }
+                if (secondColorEnabled) {
+                    for (var i = 0; i < canvas.width; i += 1) {
+                        byteDataCompressed.push(0x75);
+                        byteDataCompressed.push(byte_per_line + 7);
+                        byteDataCompressed.push(byte_per_line);
+                        byteDataCompressed.push(0x00);
+                        byteDataCompressed.push(0x00);
+                        byteDataCompressed.push(0x00);
+                        byteDataCompressed.push(0x00);
+                        for (var b = 0; b < byte_per_line; b++) {
+                            byteDataCompressed.push(byteData[currentPosi++]);
+                        }
+                    }
+                }
+                byteDataCompressed[0] = byteDataCompressed.length & 0xff;
+                byteDataCompressed[1] = (byteDataCompressed.length >> 8) & 0xff;
+                byteDataCompressed[2] = (byteDataCompressed.length >> 16) & 0xff;
+                byteDataCompressed[3] = (byteDataCompressed.length >> 24) & 0xff;
+            } else {
+                for (var b = 0; b < byteData.length; b++) {
+                    byteDataCompressed.push(byteData[b]);
+                }
+                if (secondColorEnabled) {
+                    byteDataCompressed = [...byteDataCompressed, ...byteDataRed];
+                }
+            }
+            pixelDataTextarea.value = buf2hex(byteDataCompressed);
+
+        }
+
+        function doAll() {
+            createCanvas();
+            //addText();
+            getPixelData();
+        }
+
+        function updateParameters() {
+            var select = document.getElementById("optionsSelect");
+            var selectedValue = select.options[select.selectedIndex].value;
+            // document.getElementById("rawTypeInput").value = selectedValue;
+            decodeTypes(Number("0x" + selectedValue));
+        }
+
+        function decodeRaw() {
+            var rawTypeIn = document.getElementById("rawTypeInput").value;
+            decodeTypes(Number("0x" + rawTypeIn));
+        }
+
+        function decodeTypes(rawType) {
+            var screenResolution = (rawType >> 5) & 63;
+            var dispPtype = (rawType >> 3) & 3;
+            var availColors = ((rawType >> 1) & 3) + ((rawType >> 10) & 12);
+            var singleDoubleMirror = rawType & 1;
+            var canDoCompression = (rawType & 0x4000) ? 0 : 1;
+
+            console.log("Display Resolution: " + screenResolution);
+            console.log("Display Type: " + dispPtype);
+            console.log("Display Colors: " + availColors);
+            console.log("Display Mirror: " + singleDoubleMirror);
+            console.log("Display Compression: " + canDoCompression);
+
+
+            if (canDoCompression)
+                document.getElementById('compressionCheckbox').checked = true;
+            else
+                document.getElementById('compressionCheckbox').checked = false;
+
+
+            switch (screenResolution) {
+                case 0:
+                widthInput
+                    document.getElementById('heightInput').value = "104";
+                    document.getElementById('widthInput').value = "212";
+                    break;
+                case 1:
+                    document.getElementById('heightInput').value = "128";
+                    document.getElementById('widthInput').value = "296";
+                    break;
+                case 2:
+                    document.getElementById('heightInput').value = "400";
+                    document.getElementById('widthInput').value = "300";
+                    break;
+                case 3:
+                    document.getElementById('heightInput').value = "384";
+                    document.getElementById('widthInput').value = "640";
+                    break;
+                case 4:
+                    document.getElementById('heightInput').value = "640";
+                    document.getElementById('widthInput').value = "960";
+                    break;
+                case 5:
+                    document.getElementById('heightInput').value = "132";
+                    document.getElementById('widthInput').value = "250";
+                    break;
+                case 6:
+                    document.getElementById('heightInput').value = "96";
+                    document.getElementById('widthInput').value = "196";
+                    break;
+                case 7:
+                    document.getElementById('heightInput').value = "480";
+                    document.getElementById('widthInput').value = "640";
+                    break;
+                case 8:
+                    document.getElementById('heightInput').value = "128";
+                    document.getElementById('widthInput').value = "250";
+                    break;
+                case 9:
+                    document.getElementById('heightInput').value = "800";
+                    document.getElementById('widthInput').value = "480";
+                    break;
+                case 10:
+                    document.getElementById('heightInput').value = "480";
+                    document.getElementById('widthInput').value = "280";
+                    break;
+            }
+
+            switch (dispPtype) {
+                case 0:// TFT
+                    document.getElementById('mirrorCheckbox').checked = true;
+                    break;
+                case 1:// EPA
+                    document.getElementById('mirrorCheckbox').checked = true;
+                    break;
+                case 2:// EPA1
+                    document.getElementById('mirrorCheckbox').checked = false;
+                    break;
+                case 3:// EPA2
+                    document.getElementById('mirrorCheckbox').checked = true;
+                    break;
+            }
+            switch (availColors) {
+                case 0:// BW
+                    document.getElementById('secondColorCheckbox').checked = false;
+                    break;
+                case 1:// BWR
+                    document.getElementById('secondColorCheckbox').checked = true;
+                    break;
+                case 2:// BWY
+                    document.getElementById('secondColorCheckbox').checked = true;
+                    break;
+                case 3:// BWRY
+                    document.getElementById('secondColorCheckbox').checked = true;
+                    break;
+                case 4:// BWRGBYO
+                    document.getElementById('secondColorCheckbox').checked = true;
+                    break;
+            }
+            switch (singleDoubleMirror) {
+                case 0:// Single image
+                    break;
+                case 1:// 2 Images
+                    break;
+            }
+
+            doAll();
+        }
+
+        function resetImageSelector() {
+            document.getElementById("imageUpload").value = '';
+        };
+    </script>
+    <script>
+        let bleDevice;
+        let gattServer;
+        let Theservice;
+        let writeCharacteristic;
+        let writeCharacteristicImg;
+        let reconnectTrys = 0;
+
+        let imgArray = "";
+        let imgArrayLen = 0;
+        let uploadPart = 0;
+
+        function resetVariables() {
+            gattServer = null;
+            Theservice = null;
+            writeCharacteristic = null;
+            writeCharacteristicImg = null;
+            document.getElementById("log").value = '';
+            imgArray = "";
+            imgArrayLen = 0;
+            uploadPart = 0;
+        }
+
+        function handleError(error) {
+            console.log(error);
+            resetVariables();
+            if (bleDevice == null)
+                return;
+            if (reconnectTrys <= 5) {
+                reconnectTrys++;
+                connect();
+            }
+            else {
+                addLog("Was not able to connect, aborting");
+                reconnectTrys = 0;
+            }
+        }
+
+        function delayPromise(delay) {
+            return new Promise(resolve => {
+                setTimeout(resolve, delay);
+            });
+        }
+
+        async function sendCommandImg(cmd) {
+            if (writeCharacteristicImg) {
+                await writeCharacteristicImg.writeValue(cmd)
+                    .catch(() => {
+                        addLog("DOMException: GATT operation already in progress.")
+                        return Promise.resolve()
+                            .then(() => this.delayPromise(500))
+                            .then(() => { writeCharacteristicImg.writeValue(cmd); });
+                    });
+            }
+        }
+
+        async function sendCommand(cmd) {
+            if (writeCharacteristic) {
+                await writeCharacteristic.writeValue(cmd)
+                    .catch(() => {
+                        addLog("DOMException: GATT operation already in progress.")
+                        return Promise.resolve()
+                            .then(() => this.delayPromise(500))
+                            .then(() => { writeCharacteristic.writeValue(cmd); });
+                    });
+            }
+        }
+
+        async function sendcmd(cmdTXT) {
+            let cmd = hexToBytes(cmdTXT);
+            addLog('Send CMD: ' + cmdTXT);
+            await sendCommand(cmd);
+        }
+
+        function sendimg(cmdIMG) {
+            imgArray = cmdIMG.replace(/(?:\r\n|\r|\n|,|0x| )/g, '');
+            imgArrayLen = imgArray.length;
+            uploadPart = 0;
+            console.log('Sending image ' + imgArrayLen / 2);
+            sendcmd("01");
+        }
+
+        function img_state_handle(data) {
+            switch (data.substring(0, 2)) {
+                case "01":
+                    if (data == "01f400")
+                        sendcmd("02" + intToHex(imgArrayLen / 2) + "000000");
+                    else
+                        addLog("Please reconnect to send a new Image");
+                    break;
+
+                case "02":
+                    addLog("Sending now stage 3");
+                    sendcmd("03");
+                    break;
+
+                case "05":
+                    if (data.substring(2, 4) == "08") {
+                        addLog("Image upload done, refreshing and reconecting now");
+                        if (gattServer != null && gattServer.connected) {
+                            if (bleDevice != null && bleDevice.gatt.connected)
+                                bleDevice.gatt.disconnect();
+                        }
+                        setTimeout(function () { reConnect(); }, 5000);
+                    }
+                    else if (data.substring(2, 4) != "00") {
+                        addLog("Something wrong in the upload flow, aborting!!!");
+                    }
+                    else {
+                        sendIMGpart(data.substring(4, 12));
+                    }
+                    break;
+            }
+        }
+
+        var oldPart = "";
+        function sendIMGpart(partAcked) {
+            if (imgArray.length > 0) {
+                let currentpart = oldPart;
+                console.log("PartACK: " + partAcked + " PartUpload: " + intToHex(uploadPart));
+                if (partAcked == intToHex(uploadPart)) {
+                    currentpart = intToHex(uploadPart) + imgArray.substring(0, 480);
+                    oldPart = currentpart;
+                    imgArray = imgArray.substring(480);
+                    setStatus('Current part: ' + uploadPart);
+                    uploadPart++;
+                } else {
+                    addLog("Resending last part because of error");
+                }
+                console.log('Curr Part: ' + currentpart);
+                sendCommandImg(hexToBytes(currentpart));
+            }
+            else {
+                addLog("Img upload done");
+            }
+        }
+
+        function disconnect() {
+            resetVariables();
+            addLog('Disconnected.');
+            document.getElementById("connectbutton").innerHTML = 'Connect';
+        }
+
+        function handleNotify(data) {
+            addLog("Got bytes: " + bytesToHex(data.buffer));
+            setTimeout(function () { img_state_handle(bytesToHex(data.buffer)); }, 50);
+        }
+
+        function preConnect() {
+            if (gattServer != null && gattServer.connected) {
+                if (bleDevice != null && bleDevice.gatt.connected)
+                    bleDevice.gatt.disconnect();
+            }
+            else {
+                connectTrys = 0;
+                navigator.bluetooth.requestDevice({ 
+                        filters: [{ namePrefix: "NEMR" }, { namePrefix: "PICK" }], 
+                        optionalServices: [0xFEF0]
+                    }).then(device => {
+                    device.addEventListener('gattserverdisconnected', disconnect);
+                    bleDevice = device;
+                    connect();
+                }).catch(handleError);
+            }
+        }
+
+        function reConnect() {
+            connectTrys = 0;
+            if (bleDevice != null && bleDevice.gatt.connected)
+                bleDevice.gatt.disconnect();
+            resetVariables();
+            addLog("Reconnect");
+            setTimeout(function () { connect(); }, 300);
+        }
+
+        function connect() {
+            if (writeCharacteristic == null) {
+                addLog("Connecting to: " + bleDevice.name);
+                bleDevice.gatt.connect().then(server => {
+                    console.log('> Found GATT server');
+                    gattServer = server;
+                    return gattServer.getPrimaryService(0xFEF0);
+                }).then(service => {
+                    console.log('> Found service');
+                    Theservice = service;
+                    return Theservice.getCharacteristic(0xFEF2);
+                }).then(characteristic => {
+                    addLog('> Found write characteristicImg');
+                    writeCharacteristicImg = characteristic;
+                    return Theservice.getCharacteristic(0xFEF1);
+                }).then(characteristic => {
+                    addLog('> Found write characteristic');
+                    document.getElementById("connectbutton").innerHTML = 'Disconnect';
+                    writeCharacteristic = characteristic;
+                    return writeCharacteristic.startNotifications().then(() => {
+                        writeCharacteristic.addEventListener('characteristicvaluechanged', event => {
+                            var value = event.target.value;
+                            handleNotify(value);
+                        });
+                    });
+                }).catch(handleError);
+            }
+        }
+
+        function setStatus(statusText) {
+            document.getElementById("status").innerHTML = statusText;
+        }
+
+        function addLog(logTXT) {
+            var today = new Date();
+            var time = ("0" + today.getHours()).slice(-2) + ":" + ("0" + today.getMinutes()).slice(-2) + ":" + ("0" + today.getSeconds()).slice(-2) + " : ";
+            document.getElementById("log").innerHTML += time + logTXT + '<br>';
+            console.log(time + logTXT);
+            while ((document.getElementById("log").innerHTML.match(/<br>/g) || []).length > 10) {
+                var logs_br_position = document.getElementById("log").innerHTML.search("<br>");
+                document.getElementById("log").innerHTML = document.getElementById("log").innerHTML.substring(logs_br_position + 4);
+            }
+        }
+
+        function hexToBytes(hex) {
+            for (var bytes = [], c = 0; c < hex.length; c += 2)
+                bytes.push(parseInt(hex.substr(c, 2), 16));
+            return new Uint8Array(bytes);
+        }
+
+        function bytesToHex(data) {
+            return new Uint8Array(data).reduce(
+                function (memo, i) {
+                    return memo + ("0" + i.toString(16)).slice(-2);
+                }, "");
+        }
+
+        function intToHex(intIn) {
+            var stringOut = "";
+            stringOut = ("00000000" + intIn.toString(16)).substr(-8)
+            return stringOut.substring(6, 8) + stringOut.substring(4, 6) + stringOut.substring(2, 4) + stringOut.substring(0, 2);
+        }
+
+        function findNearestColor(r, g, b) {
+            if (r > 128 && g < 128 && b < 128) {
+                return [255, 0, 0];
+            }
+            const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            if (luminance < 85) {
+                return [0, 0, 0];
+            }
+            return [255, 255, 255];
+        }
+
+        const canvas = document.getElementById('myCanvas');
+        const ctx = canvas.getContext('2d');
+        function applyDithering() {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            function clamp(value) {
+                return Math.max(0, Math.min(255, value));
+            }
+
+            for (let i = 0; i < data.length; i += 4) {
+                const oldR = data[i];
+                const oldG = data[i + 1];
+                const oldB = data[i + 2];
+                const [newR, newG, newB] = findNearestColor(oldR, oldG, oldB);
+                data[i] = newR;
+                data[i + 1] = newG;
+                data[i + 2] = newB;
+
+                const errR = oldR - newR;
+                const errG = oldG - newG;
+                const errB = oldB - newB;
+
+                function distributeError(index, factor) {
+                    if (index < 0 || index >= data.length) return;
+                    data[index] = clamp(data[index] + errR * factor);
+                    data[index + 1] = clamp(data[index + 1] + errG * factor);
+                    data[index + 2] = clamp(data[index + 2] + errB * factor);
+                }
+
+                if (i + 4 < data.length) {
+                    distributeError(i + 4, 7 / 16);
+                }
+                let nextLine = i + 4 * canvas.width;
+                if (nextLine < data.length) {
+                    distributeError(nextLine - 4, 3 / 16);
+                    distributeError(nextLine, 5 / 16);
+                    if (nextLine + 4 < data.length) {
+                        distributeError(nextLine + 4, 1 / 16);
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        window.onload = function () {
+            doAll();
+        }
+        function uploadImage() {
+            const fileInput = document.getElementById('imageUpload');
+            const canvas = document.getElementById('myCanvas');
+            const ctx = canvas.getContext('2d');
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        const canvasWidth = canvas.width;
+                        const canvasHeight = canvas.height;
+                        const imgWidth = img.width;
+                        const imgHeight = img.height;
+                        const scale = Math.max(canvasWidth / imgWidth, canvasHeight / imgHeight);
+                        const newWidth = imgWidth * scale;
+                        const newHeight = imgHeight * scale;
+                        const offsetX = (canvasWidth - newWidth) / 2;
+                        const offsetY = (canvasHeight - newHeight) / 2;
+                        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                        ctx.drawImage(img, offsetX, offsetY, newWidth, newHeight);
+                        getPixelData();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            }
+        }
+    </script>
+</body>
+
+</html>
