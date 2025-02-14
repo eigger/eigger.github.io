@@ -10,16 +10,42 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap');
+        
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --secondary-color: #555;
+            --button-bg: #007bff;
+            --button-hover: #0056b3;
+            --container-bg: white;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --status-bg: #f3f3f3;
+        }
+        
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #f8f9fa;
+            --primary-color: #90caf9;
+            --secondary-color: #ccc;
+            /* --button-bg: #90caf9;
+            --button-hover: #64b5f6; */
+            --container-bg: #1e1e1e;
+            --shadow-color: rgba(255, 255, 255, 0.1);
+            --status-bg: #333;
+        }
+        
         body {
             font-family: 'Nanum Gothic', sans-serif;
             text-align: center;
             margin: 20px;
-            background-color: #f8f9fa;
-            color: #333;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
         }
     
         h1, h2 {
-            color: #007bff;
+            color: var(--primary-color);
             margin-bottom: 10px;
             font-size: 20px;
         }
@@ -27,10 +53,9 @@
         label {
             font-weight: bold;
             margin-right: 5px;
-            color: #555;
+            color: var(--secondary-color);
             font-size: 14px;
             width: 150px;
-            /* display: inline-block; */
         }
     
         input,
@@ -44,7 +69,7 @@
         }
     
         button {
-            background-color: #007bff;
+            background-color: var(--button-bg);
             color: #fff;
             cursor: pointer;
             transition: background-color 0.3s;
@@ -52,16 +77,16 @@
         }
     
         button:hover {
-            background-color: #0056b3;
+            background-color: var(--button-hover);
         }
     
         .container {
             max-width: 400px;
             margin: 0 auto;
-            background: white;
+            background: var(--container-bg);
             padding: 15px;
             border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0px 0px 10px var(--shadow-color);
         }
     
         .options {
@@ -71,77 +96,51 @@
             gap: 10px;
             margin: 10px 0;
         }
-        .select-label {
-            text-align: left;
-        }
-        .file-upload {
-            text-align: left;
-        }
+    
         #myCanvas {
             border: 1px solid black;
             display: block;
             margin: 10px auto;
         }
     
-        /* 숨겨진 textarea */
         #pixelData {
             display: none;
         }
     
-        #ble-upload {
-            margin-top: 5px;
-            padding: 10px;
-            border-radius: 5px;
-            background: #007bff;
-            color: #fff;
-        }
-    
-        #ble-upload button {
-            background-color: white;
-            color: #007bff;
-            border: 1px solid #007bff;
-        }
-    
-        #ble-upload button:hover {
-            background-color: #ddd; /* 기본 hover 스타일 */
-        }
-
-        #ble-upload button:disabled {
-            background-color: #ddd; /* 기본 hover 스타일 */
-            opacity: 0.6; /* 약간 흐리게 (선택사항) */
-        }
-
-        #ble-upload button:disabled:hover {
-            cursor: not-allowed; /* 클릭 불가능한 커서 */
-            opacity: 0.6; /* 약간 흐리게 (선택사항) */
-        }
-
-        #status {
+        #status, #log {
             text-align: left;
             padding: 10px;
             border-radius: 5px;
-            background-color: #f3f3f3;
-            color: black;
+            background-color: var(--status-bg);
+            color: var(--text-color);
             font-size: 12px;
             margin-top: 10px;
         }
-        #log {
-            text-align: left;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f3f3f3;
-            color: black;
-            font-size: 12px;
-            margin-top: 10px;
+
+        .theme-container {
+            display: flex;
+            justify-content: space-evenly;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            font-size: 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
         }
     
     </style>
 </head>
 
-<body>
+<body data-theme="light">
     <div class="container">
-        <h1>Gicisky Image Uploader</h1>
-    
+        <div class="theme-container">      
+            <h1>Gicisky Image Uploader</h1>
+            <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+        </div>
+
+
         <!-- 라벨 타입 선택 -->
         <div class="select-label">
             <label for="optionsSelect">1. 라벨 타입 선택</label>
@@ -193,6 +192,14 @@
     
 
     <script>
+        function toggleTheme() {
+            let body = document.body;
+            let button = document.querySelector('.theme-toggle');
+            let currentTheme = body.getAttribute("data-theme");
+            let newTheme = currentTheme === "light" ? "dark" : "light";
+            body.setAttribute("data-theme", newTheme);
+            button.textContent = newTheme === "light" ? "☀️" : "🌙";
+        }
         function createCanvas() {
             var width = parseInt(document.getElementById('widthInput').value);
             var height = parseInt(document.getElementById('heightInput').value);
@@ -703,12 +710,10 @@
                 bleDevice.gatt.connect().then(server => {
                     console.log('> Found GATT server');
                     gattServer = server;
-                    console.log(server);
                     return gattServer.getPrimaryService(0xFEF0);
                 }).then(service => {
                     console.log('> Found service');
                     Theservice = service;
-                    console.log(service);
                     return Theservice.getCharacteristic(0xFEF2);
                 }).then(characteristic => {
                     addLog('> Found write characteristicImg');
