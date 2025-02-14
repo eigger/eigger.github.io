@@ -116,7 +116,19 @@
             font-size: 12px;
             margin-top: 10px;
         }
-
+        .pixlr-button {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 15px;
+            background-color: var(--button-bg);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+        }
         .theme-container {
             display: flex;
             justify-content: space-evenly;
@@ -170,11 +182,13 @@
         <!-- 이미지 업로드 -->
         <div class="file-upload">
             <label for="imageUpload">2. 이미지 선택</label>
-            <input type="file" id="imageUpload" accept="image/*" onclick="resetImageSelector()" onchange="uploadImage()">
+            <input type="file" id="imageUpload" accept="image/*" onclick="resetImageSelector()" onchange="uploadImage()"><br>
+            
         </div>
     
         <!-- 캔버스 -->
         <canvas id="myCanvas" width="250" height="128"></canvas>
+        <button class="pixlr-button" onclick="window.open('https://pixlr.com/kr/editor/', '_blank')">📷 Pixlr에서 이미지 편집</button>
     
         <!-- 숨겨진 textarea -->
         <textarea id="pixelData"></textarea>

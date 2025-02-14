@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gicisky Image Uploader (슬라이더 & 라벨 선택, 전체 코드)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap');
+    :root {
+      --bg-color: #f8f9fa;
+      --text-color: #333;
+      --primary-color: #007bff;
+      --secondary-color: #555;
+      --button-bg: #007bff;
+      --button-hover: #0056b3;
+      --container-bg: white;
+      --shadow-color: rgba(0, 0, 0, 0.1);
+      --status-bg: #f3f3f3;
+    }
+    [data-theme="dark"] {
+      --bg-color: #121212;
+      --text-color: #f8f9fa;
+      --primary-color: #90caf9;
+      --secondary-color: #ccc;
+      --container-bg: #1e1e1e;
+      --shadow-color: rgba(255, 255, 255, 0.1);
+      --status-bg: #333;
+    }
+    body {
+      font-family: 'Nanum Gothic', sans-serif;
+      text-align: center;
+      margin: 20px;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+    h1, h2 {
+      color: var(--primary-color);
+      margin-bottom: 10px;
+      font-size: 20px;
+    }
+    label {
+      font-weight: bold;
+      margin-right: 5px;
+      color: var(--secondary-color);
+      font-size: 14px;
+    }
+    input,
+    select,
+    button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      background-color: var(--button-bg);
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 0.3s;
+      border: none;
+    }
+    button:hover {
+      background-color: var(--button-hover);
+    }
+    .container {
+      max-width: 450px;
+      margin: 0 auto;
+      background: var(--container-bg);
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px var(--shadow-color);
+    }
+    .select-label {
+      margin: 10px 0;
+    }
+    canvas {
+      border: 1px solid black;
+      display: block;
+      margin: 10px auto;
+    }
+    #pixelData {
+      /* display: none; */
+    }
+    #status, #log {
+      text-align: left;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: var(--status-bg);
+      color: var(--text-color);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    .pixlr-button {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 10px 15px;
+      background-color: var(--button-bg);
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      transition: background-color 0.3s;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .theme-container {
+      display: flex;
+      justify-content: space-evenly;
+      align-items: center;
+    }
+    .theme-toggle {
+      font-size: 24px;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+    .slider-container {
+      margin: 10px 0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+    .slider-container label {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body data-theme="light">
+  <div class="container">
+    <!-- 테마 및 제목 영역 -->
+    <div class="theme-container">
+      <h1>Gicisky Image Uploader</h1>
+      <button class="theme-toggle" id="themeToggle">☀️</button>
+    </div>
+
+    <!-- 라벨 타입 선택 (항상 보임) -->
+    <div class="select-label">
+      <label for="optionsSelect">라벨 타입 선택</label>
+      <select id="optionsSelect">
+        <option value="410B">250x122 BWR</option>
+        <option value="40A0">250x132 TFT</option>
+      </select>
+    </div>
+
+    <!-- 이미지 업로드 -->
+    <div class="file-upload">
+      <label for="imageUpload">이미지 선택</label>
+      <input type="file" id="imageUpload" accept="image/*">
+    </div>
+    <!-- 체크박스 옵션 -->
+    <div class="options" style="display: none;">
+        <label><input type="checkbox" id="ditherrin"> Dithering</label>
+        <label><input type="checkbox" id="compressionCheckbox"> Compression</label>
+        <label><input type="checkbox" id="secondColorCheckbox"> Second Color</label>
+        <label><input type="checkbox" id="mirrorCheckbox"> Mirror</label>
+        <label><input type="checkbox" id="tftCheckbox"> TFT</label>
+    </div>
+    <!-- 슬라이더 컨트롤 -->
+    <div class="slider-container">
+      <label for="luminanceSlider">Luminance 임계값: <span id="lumVal">128</span></label>
+      <input type="range" id="luminanceSlider" min="0" max="255" value="128">
+    </div>
+    <div class="slider-container">
+      <label for="redSlider">Red 임계값: <span id="redVal">170</span></label>
+      <input type="range" id="redSlider" min="0" max="255" value="170">
+    </div>
+
+    <!-- 캔버스 및 편집 버튼 -->
+    <canvas id="myCanvas" width="250" height="128"></canvas>
+    <button class="pixlr-button" id="pixlrButton">📷 Pixlr에서 이미지 편집</button>
+
+    <!-- 숨김 텍스트영역 (픽셀 데이터 저장) -->
+    <textarea id="pixelData"></textarea>
+
+    <!-- BLE 업로드 섹션 (필요 시) -->
+    <div id="ble-upload">
+      <button id="connectButton">3. 연결</button>
+      <button id="sendImageButton" disabled>4. 이미지 전송</button>
+      <button id="clearLogButton">로그 정리</button>
+      <div id="status">Upload status</div>
+      <div id="log">Logs:</div>
+    </div>
+  </div>
+
+  <!-- JavaScript: 기능별 모듈화 (슬라이더 오버레이 적용 및 pixelData 갱신) -->
+  <script>
+    (function() {
+      /* ──────────── 유틸리티 함수 ──────────── */
+      const Utils = {
+        bufferToHex(buffer) {
+          return [...new Uint8Array(buffer)]
+            .map(x => x.toString(16).padStart(2, '0'))
+            .join('');
+        },
+        hexToBytes(hex) {
+          let bytes = [];
+          for (let c = 0; c < hex.length; c += 2) {
+            bytes.push(parseInt(hex.substr(c, 2), 16));
+          }
+          return new Uint8Array(bytes);
+        },
+        bytesToHex(data) {
+          return Array.from(new Uint8Array(data))
+            .map(i => ("0" + i.toString(16)).slice(-2))
+            .join('');
+        },
+        intToHex(num) {
+          const hexStr = ("00000000" + num.toString(16)).slice(-8);
+          return hexStr.substring(6, 8) + hexStr.substring(4, 6) + hexStr.substring(2, 4) + hexStr.substring(0, 2);
+        },
+        clamp(value) {
+          return Math.max(0, Math.min(255, value));
+        }
+      };
+
+      /* ──────────── 테마 관리 ──────────── */
+      const ThemeManager = {
+        toggleTheme() {
+          const body = document.body;
+          const toggleBtn = document.getElementById('themeToggle');
+          const currentTheme = body.getAttribute("data-theme");
+          const newTheme = currentTheme === "light" ? "dark" : "light";
+          body.setAttribute("data-theme", newTheme);
+          toggleBtn.textContent = newTheme === "light" ? "☀️" : "🌙";
+        }
+      };
+
+      /* ──────────── 캔버스 관리 ──────────── */
+      const CanvasManager = {
+        canvas: document.getElementById('myCanvas'),
+        ctx: document.getElementById('myCanvas').getContext('2d'),
+        originalImageData: null, // 업로드된 원본 이미지 데이터를 저장
+        initCanvas() {
+          const width = parseInt(document.getElementById('widthInput')?.value || 250);
+          const height = parseInt(document.getElementById('heightInput')?.value || 128);
+          this.canvas.width = width;
+          this.canvas.height = height;
+          this.ctx.fillStyle = 'white';
+          this.ctx.fillRect(0, 0, width, height);
+        },
+        
+        decodeTypes() {
+            var select = document.getElementById("optionsSelect");
+            var selectedValue = select.options[select.selectedIndex].value;
+            var rawType = Number("0x" + selectedValue);
+            var screenResolution = (rawType >> 5) & 63;
+            var dispPtype = (rawType >> 3) & 3;
+            var availColors = ((rawType >> 1) & 3) + ((rawType >> 10) & 12);
+            var singleDoubleMirror = rawType & 1;
+            var canDoCompression = (rawType & 0x4000) ? 0 : 1;
+
+            console.log("Display Resolution: " + screenResolution);
+            console.log("Display Type: " + dispPtype);
+            console.log("Display Colors: " + availColors);
+            console.log("Display Mirror: " + singleDoubleMirror);
+            console.log("Display Compression: " + canDoCompression);
+
+            document.getElementById('ditherrin').checked = false;
+            if (canDoCompression)
+                document.getElementById('compressionCheckbox').checked = true;
+            else
+                document.getElementById('compressionCheckbox').checked = false;
+
+
+            switch (screenResolution) {
+                case 0:
+                widthInput
+                    document.getElementById('heightInput').value = "104";
+                    document.getElementById('widthInput').value = "212";
+                    break;
+                case 1:
+                    document.getElementById('heightInput').value = "128";
+                    document.getElementById('widthInput').value = "296";
+                    break;
+                case 2:
+                    document.getElementById('heightInput').value = "400";
+                    document.getElementById('widthInput').value = "300";
+                    break;
+                case 3:
+                    document.getElementById('heightInput').value = "384";
+                    document.getElementById('widthInput').value = "640";
+                    break;
+                case 4:
+                    document.getElementById('heightInput').value = "640";
+                    document.getElementById('widthInput').value = "960";
+                    break;
+                case 5:
+                    document.getElementById('heightInput').value = "132";
+                    document.getElementById('widthInput').value = "250";
+                    break;
+                case 6:
+                    document.getElementById('heightInput').value = "96";
+                    document.getElementById('widthInput').value = "196";
+                    break;
+                case 7:
+                    document.getElementById('heightInput').value = "480";
+                    document.getElementById('widthInput').value = "640";
+                    break;
+                case 8:
+                    document.getElementById('heightInput').value = "128";
+                    document.getElementById('widthInput').value = "250";
+                    break;
+                case 9:
+                    document.getElementById('heightInput').value = "800";
+                    document.getElementById('widthInput').value = "480";
+                    break;
+                case 10:
+                    document.getElementById('heightInput').value = "480";
+                    document.getElementById('widthInput').value = "280";
+                    break;
+            }
+
+            switch (dispPtype) {
+                case 0:// TFT
+                    document.getElementById('mirrorCheckbox').checked = false;
+                    document.getElementById('tftCheckbox').checked = true;
+                    break;
+                case 1:// EPA
+                    document.getElementById('mirrorCheckbox').checked = false;
+                    document.getElementById('tftCheckbox').checked = false;
+                    break;
+                case 2:// EPA1
+                    document.getElementById('mirrorCheckbox').checked = false;
+                    document.getElementById('tftCheckbox').checked = false;
+                    break;
+                case 3:// EPA2
+                    document.getElementById('mirrorCheckbox').checked = false;
+                    document.getElementById('tftCheckbox').checked = false;
+                    break;
+            }
+            switch (availColors) {
+                case 0:// BW
+                    document.getElementById('secondColorCheckbox').checked = false;
+                    break;
+                case 1:// BWR
+                    document.getElementById('secondColorCheckbox').checked = true;
+                    break;
+                case 2:// BWY
+                    document.getElementById('secondColorCheckbox').checked = true;
+                    break;
+                case 3:// BWRY
+                    document.getElementById('secondColorCheckbox').checked = true;
+                    break;
+                case 4:// BWRGBYO
+                    document.getElementById('secondColorCheckbox').checked = true;
+                    break;
+            }
+            switch (singleDoubleMirror) {
+                case 0:// Single image
+                    break;
+                case 1:// 2 Images
+                    break;
+            }
+        },
+        /* displayOverlay() : 원본 이미지 데이터를 이용해
+           - bwData: luminance 기준 (luminance > lumThreshold → 흰색, 아니면 검정)
+           - redOverlayData: (r > redThreshold && g < redThreshold)이면 빨강, 아니면 투명
+           최종 합성하여 캔버스에 출력하고, 그 결과를 pixelData에 헥스 문자열로 저장
+        */
+        displayOverlay() {
+          if (!this.originalImageData) return;
+          const width = this.canvas.width;
+          const height = this.canvas.height;
+          const origData = this.originalImageData;
+          const bwData = this.ctx.createImageData(width, height);
+          const redOverlayData = this.ctx.createImageData(width, height);
+          const finalData = this.ctx.createImageData(width, height);
+
+          // 슬라이더 값 읽기
+          const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
+          const redThreshold = parseInt(document.getElementById('redSlider').value);
+
+          for (let i = 0; i < origData.data.length; i += 4) {
+            const r = origData.data[i];
+            const g = origData.data[i + 1];
+            const b = origData.data[i + 2];
+
+            // 흑백 이진화 (luminance 기준)
+            const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            if (luminance > lumThreshold) {
+              bwData.data[i]     = 255;
+              bwData.data[i + 1] = 255;
+              bwData.data[i + 2] = 255;
+              bwData.data[i + 3] = 255;
+            } else {
+              bwData.data[i]     = 0;
+              bwData.data[i + 1] = 0;
+              bwData.data[i + 2] = 0;
+              bwData.data[i + 3] = 255;
+            }
+
+            // 빨강 오버레이: r > redThreshold && g < redThreshold이면 빨강, 아니면 투명
+            if (r > redThreshold && g < redThreshold) {
+              redOverlayData.data[i]     = 255;
+              redOverlayData.data[i + 1] = 0;
+              redOverlayData.data[i + 2] = 0;
+              redOverlayData.data[i + 3] = 255;
+            } else {
+              redOverlayData.data[i]     = 0;
+              redOverlayData.data[i + 1] = 0;
+              redOverlayData.data[i + 2] = 0;
+              redOverlayData.data[i + 3] = 0;
+            }
+
+            // 최종 합성: 빨강 오버레이가 적용된 픽셀은 빨강, 그렇지 않으면 bwData
+            if (redOverlayData.data[i + 3] > 0) {
+              finalData.data[i]     = redOverlayData.data[i];
+              finalData.data[i + 1] = redOverlayData.data[i + 1];
+              finalData.data[i + 2] = redOverlayData.data[i + 2];
+              finalData.data[i + 3] = 255;
+            } else {
+              finalData.data[i]     = bwData.data[i];
+              finalData.data[i + 1] = bwData.data[i + 1];
+              finalData.data[i + 2] = bwData.data[i + 2];
+              finalData.data[i + 3] = 255;
+            }
+          }
+
+          this.ctx.clearRect(0, 0, width, height);
+          this.ctx.putImageData(finalData, 0, 0);
+          this.getPixelData();
+        },
+        
+        getPixelData() {
+            if (document.getElementById('ditherrin').checked)
+                applyDithering();
+            var compressionEnabled = document.getElementById('compressionCheckbox').checked;
+            var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
+            var mirrorEnabled = document.getElementById('mirrorCheckbox').checked;
+            var tftEnabled = document.getElementById('tftCheckbox').checked;
+            var canvas = document.getElementById('myCanvas');
+            var ctx = canvas.getContext('2d');
+            var width = canvas.width;
+            var height = canvas.height;
+            var imageData = ctx.getImageData(0, 0, width, height);
+            // 슬라이더 값 읽기
+            const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
+            const redThreshold = parseInt(document.getElementById('redSlider').value);
+            let originalCanvas = document.createElement("canvas");
+            let originalCtx = originalCanvas.getContext("2d");
+            originalCanvas.width = canvas.width;
+            originalCanvas.height = canvas.height;
+            originalCtx.putImageData(imageData, 0, 0);
+
+            if (tftEnabled) {
+                var tempCanvas = document.createElement('canvas');
+                var tempCtx = tempCanvas.getContext('2d');
+                width = canvas.width / 2;
+                height = canvas.height * 2;
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+
+                // 4. 원본 캔버스를 새로운 크기로 그리기 (리사이징)
+                tempCtx.drawImage(originalCanvas, 0, 0, imageData.width, imageData.height, 0, 0, width, height);
+
+                // 5. 리사이즈된 이미지 데이터를 반환
+                imageData = tempCtx.getImageData(0, 0, width, height);
+            }
+
+            if (mirrorEnabled) {
+                var tempCanvas = document.createElement('canvas');
+                var tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+
+                tempCtx.translate(width, 0);
+                tempCtx.scale(-1, 1);
+                tempCtx.drawImage(originalCanvas, 0, 0, width, height);
+                imageData = tempCtx.getImageData(0, 0, width, height);
+            }
+
+            var pixels = imageData.data;
+            var byteData = [];
+            var byteDataRed = [];
+            var currentByte = 0;
+            var currentByteRed = 0;
+            var bitPosition = 7;
+            for (var x = 0; x < width; x++) {
+                for (var y = 0; y < height; y++) {
+                    var curr = (Math.round(y * width) + x) * 4;
+                    var r = pixels[curr];
+                    var g = pixels[curr + 1];
+                    var b = pixels[curr + 2];
+                    var luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    if (luminance > lumThreshold) {
+                        currentByte |= (1 << bitPosition);
+                    }
+                    if (r > redThreshold && g < redThreshold) {
+                        currentByteRed |= (1 << bitPosition);
+                    }
+                    bitPosition--;
+                    if (bitPosition < 0) {
+                        byteData.push(currentByte);
+                        byteDataRed.push(currentByteRed);
+                        currentByte = 0;
+                        currentByteRed = 0;
+                        bitPosition = 7;
+                    }
+                }
+            }
+
+            if (bitPosition !== 7) {
+                byteData.push(currentByte);
+                byteDataRed.push(currentByteRed);
+            }
+
+            var byteDataCompressed = [];
+            var pixelDataTextarea = document.getElementById('pixelData');
+
+            if (compressionEnabled) {
+                var currentPosi = 0;
+                var byte_per_line = height / 8;
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                for (var i = 0; i < width; i += 1) {
+                    byteDataCompressed.push(0x75);
+                    byteDataCompressed.push(byte_per_line + 7);
+                    byteDataCompressed.push(byte_per_line);
+                    byteDataCompressed.push(0x00);
+                    byteDataCompressed.push(0x00);
+                    byteDataCompressed.push(0x00);
+                    byteDataCompressed.push(0x00);
+                    for (var b = 0; b < byte_per_line; b++) {
+                        byteDataCompressed.push(byteData[currentPosi++]);
+                    }
+                }
+                if (secondColorEnabled) {
+                    for (var i = 0; i < width; i += 1) {
+                        byteDataCompressed.push(0x75);
+                        byteDataCompressed.push(byte_per_line + 7);
+                        byteDataCompressed.push(byte_per_line);
+                        byteDataCompressed.push(0x00);
+                        byteDataCompressed.push(0x00);
+                        byteDataCompressed.push(0x00);
+                        byteDataCompressed.push(0x00);
+                        for (var b = 0; b < byte_per_line; b++) {
+                            byteDataCompressed.push(byteData[currentPosi++]);
+                        }
+                    }
+                }
+                byteDataCompressed[0] = byteDataCompressed.length & 0xff;
+                byteDataCompressed[1] = (byteDataCompressed.length >> 8) & 0xff;
+                byteDataCompressed[2] = (byteDataCompressed.length >> 16) & 0xff;
+                byteDataCompressed[3] = (byteDataCompressed.length >> 24) & 0xff;
+            } else {
+                for (var b = 0; b < byteData.length; b++) {
+                    byteDataCompressed.push(byteData[b]);
+                }
+                if (secondColorEnabled) {
+                    byteDataCompressed = [...byteDataCompressed, ...byteDataRed];
+                }
+            }
+            pixelDataTextarea.value = Utils.bufferToHex(byteDataCompressed);
+
+        },
+        /* 이미지 업로드 시 원본 이미지를 캔버스에 그리고 저장 */
+        drawImage(img) {
+          const canvasW = this.canvas.width;
+          const canvasH = this.canvas.height;
+          const ctx = this.ctx;
+          const scale = Math.max(canvasW / img.width, canvasH / img.height);
+          const newW = img.width * scale;
+          const newH = img.height * scale;
+          const offsetX = (canvasW - newW) / 2;
+          const offsetY = (canvasH - newH) / 2;
+          ctx.clearRect(0, 0, canvasW, canvasH);
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, canvasW, canvasH);
+          ctx.drawImage(img, offsetX, offsetY, newW, newH);
+          // 원본 이미지를 저장
+          this.originalImageData = ctx.getImageData(0, 0, canvasW, canvasH);
+          this.displayOverlay();
+        },
+        applyDithering() {
+          const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+          const data = imageData.data;
+          for (let i = 0; i < data.length; i += 4) {
+            const oldR = data[i], oldG = data[i + 1], oldB = data[i + 2];
+            const [newR, newG, newB] = this.findNearestColor(oldR, oldG, oldB);
+            data[i] = newR; 
+            data[i + 1] = newG; 
+            data[i + 2] = newB;
+            const errR = oldR - newR, errG = oldG - newG, errB = oldB - newB;
+            const distributeError = (index, factor) => {
+              if (index < 0 || index >= data.length) return;
+              data[index] = Utils.clamp(data[index] + errR * factor);
+              data[index + 1] = Utils.clamp(data[index + 1] + errG * factor);
+              data[index + 2] = Utils.clamp(data[index + 2] + errB * factor);
+            };
+            if (i + 4 < data.length) distributeError(i + 4, 7 / 16);
+            const nextLine = i + 4 * this.canvas.width;
+            if (nextLine < data.length) {
+              distributeError(nextLine - 4, 3 / 16);
+              distributeError(nextLine, 5 / 16);
+              if (nextLine + 4 < data.length) distributeError(nextLine + 4, 1 / 16);
+            }
+          }
+          this.ctx.putImageData(imageData, 0, 0);
+        },
+        findNearestColor(r, g, b) {
+          if (r > 128 && g < 128 && b < 128) return [255, 0, 0];
+          const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+          return luminance < 85 ? [0, 0, 0] : [255, 255, 255];
+        }
+      };
+
+      /* ──────────── 라벨(파라미터) 관리 (필요 시) ──────────── */
+      const LabelManager = {
+        updateParameters() {
+          // 라벨 선택 시 필요한 동작 (여기서는 단순히 캔버스 갱신)
+          CanvasManager.decodeTypes();
+          CanvasManager.initCanvas();
+          CanvasManager.displayOverlay();
+        }
+      };
+
+      /* ──────────── BLE 관리 (필요 시) ──────────── */
+      const BLEManager = {
+        bleDevice: null,
+        gattServer: null,
+        bleService: null,
+        writeChar: null,
+        writeImageChar: null,
+        reconnectAttempts: 0,
+        imgHexData: "",
+        imgHexLength: 0,
+        uploadPartIndex: 0,
+        reset() {
+          this.gattServer = null;
+          this.bleService = null;
+          this.writeChar = null;
+          this.writeImageChar = null;
+          document.getElementById("log").innerHTML = '';
+          this.imgHexData = "";
+          this.imgHexLength = 0;
+          this.uploadPartIndex = 0;
+        },
+        async sendCommand(cmd) {
+          if (this.writeChar) {
+            try {
+              await this.writeChar.writeValue(cmd);
+            } catch (e) {
+              addLog("GATT operation in progress. 재시도...");
+              await new Promise(resolve => setTimeout(resolve, 500));
+              await this.writeChar.writeValue(cmd);
+            }
+          }
+        },
+        async sendCommandHex(cmdHex) {
+          const cmd = Utils.hexToBytes(cmdHex);
+          addLog('Send CMD: ' + cmdHex);
+          await this.sendCommand(cmd);
+        },
+        async sendImageCommand(cmd) {
+          if (this.writeImageChar) {
+            try {
+              await this.writeImageChar.writeValue(cmd);
+            } catch (e) {
+              addLog("GATT operation in progress. 재시도...");
+              await new Promise(resolve => setTimeout(resolve, 500));
+              await this.writeImageChar.writeValue(cmd);
+            }
+          }
+        },
+        sendImageData(imgData) {
+          this.imgHexData = imgData.replace(/(?:\r\n|\r|\n|,|0x| )/g, '');
+          this.imgHexLength = this.imgHexData.length;
+          this.uploadPartIndex = 0;
+          console.log('Sending image of size ' + this.imgHexLength / 2);
+          this.sendCommandHex("01");
+        },
+        handleImageState(dataHex) {
+          switch (dataHex.substring(0, 2)) {
+            case "01":
+              if (dataHex === "01f400")
+                this.sendCommandHex("02" + Utils.intToHex(this.imgHexLength / 2) + "000000");
+              else
+                addLog("새로운 이미지 전송을 위해 재연결하세요.");
+              break;
+            case "02":
+              addLog("이미지 전송 단계 3 진행 중");
+              this.sendCommandHex("03");
+              break;
+            case "05":
+              if (dataHex.substring(2, 4) === "08") {
+                addLog("이미지 업로드 완료, 연결 재설정 중");
+                if (this.gattServer && this.gattServer.connected) {
+                  if (this.bleDevice && this.bleDevice.gatt.connected)
+                    this.bleDevice.gatt.disconnect();
+                }
+                setTimeout(() => this.reConnect(), 5000);
+              } else if (dataHex.substring(2, 4) !== "00") {
+                addLog("업로드 중 오류 발생, 전송 중단!");
+              } else {
+                this.sendNextImagePart(dataHex.substring(4, 12));
+              }
+              break;
+          }
+        },
+        sendNextImagePart(partAckHex) {
+          if (this.imgHexData.length > 0) {
+            let currentPartHex = "";
+            console.log("PartACK: " + partAckHex + " PartUpload: " + Utils.intToHex(this.uploadPartIndex));
+            if (partAckHex === Utils.intToHex(this.uploadPartIndex)) {
+              currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, 480);
+              this.imgHexData = this.imgHexData.substring(480);
+              setBLEStatus('Current part: ' + this.uploadPartIndex);
+              this.uploadPartIndex++;
+            } else {
+              addLog("오류 발생, 마지막 부분 재전송");
+              currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, 480);
+            }
+            console.log('Current Part: ' + currentPartHex);
+            this.sendImageCommand(Utils.hexToBytes(currentPartHex));
+          } else {
+            addLog("이미지 업로드 완료");
+          }
+        },
+        disconnect() {
+          this.reset();
+          addLog('연결 해제됨.');
+          document.getElementById("connectButton").innerHTML = '3. 연결';
+          document.getElementById("connectButton").disabled = false;
+          document.getElementById("sendImageButton").disabled = true;
+        },
+        handleNotification(data) {
+          addLog("Received bytes: " + Utils.bytesToHex(data.buffer));
+          setTimeout(() => this.handleImageState(Utils.bytesToHex(data.buffer)), 50);
+        },
+        initiateConnection() {
+          document.getElementById("connectButton").disabled = true;
+          if (this.gattServer && this.gattServer.connected) {
+            if (this.bleDevice && this.bleDevice.gatt.connected) this.bleDevice.gatt.disconnect();
+            document.getElementById("connectButton").disabled = false;
+          } else {
+            document.getElementById("connectButton").innerHTML = '연결중...';
+            this.reconnectAttempts = 0;
+            navigator.bluetooth.requestDevice({
+              filters: [
+                { manufacturerData: [{ companyIdentifier: 0x5053 }] }
+              ],
+              optionalServices: [0xFEF0]
+            }).then(device => {
+              device.addEventListener('advertisementreceived', advertiseData);
+              device.addEventListener('gattserverdisconnected', () => this.disconnect());
+              this.bleDevice = device;
+              console.log(device);
+              this.connect();
+            }).catch(handleBLEError);
+          }
+        },
+        reConnect() {
+          this.reconnectAttempts = 0;
+          if (this.bleDevice && this.bleDevice.gatt.connected)
+            this.bleDevice.gatt.disconnect();
+          this.reset();
+          addLog("재연결 시도");
+          setTimeout(() => this.connect(), 300);
+        },
+        connect() {
+          if (!this.writeChar) {
+            addLog("Connecting to: " + this.bleDevice.name);
+            this.bleDevice.gatt.connect().then(server => {
+              console.log('> Found GATT server');
+              this.gattServer = server;
+              return this.gattServer.getPrimaryService(0xFEF0);
+            }).then(service => {
+              console.log('> Found service');
+              this.bleService = service;
+              return this.bleService.getCharacteristic(0xFEF2);
+            }).then(characteristic => {
+              addLog('> Found write characteristic for image');
+              this.writeImageChar = characteristic;
+              return this.bleService.getCharacteristic(0xFEF1);
+            }).then(characteristic => {
+              addLog('> Found write characteristic');
+              document.getElementById("connectButton").innerHTML = '연결 해제';
+              document.getElementById("connectButton").disabled = false;
+              document.getElementById("sendImageButton").disabled = false;
+              this.writeChar = characteristic;
+              return this.writeChar.startNotifications().then(() => {
+                this.writeChar.addEventListener('characteristicvaluechanged', event => {
+                  this.handleNotification(event.target.value);
+                });
+              });
+            }).catch(handleBLEError);
+          }
+        }
+      };
+
+      /* ──────────── BLE 상태 및 로그 헬퍼 ──────────── */
+      function setBLEStatus(statusText) {
+        document.getElementById("status").innerHTML = statusText;
+      }
+      function addLog(logText) {
+        const now = new Date();
+        const time = ("0" + now.getHours()).slice(-2) + ":" +
+                     ("0" + now.getMinutes()).slice(-2) + ":" +
+                     ("0" + now.getSeconds()).slice(-2) + " : ";
+        document.getElementById("log").innerHTML += time + logText + '<br>';
+        console.log(time + logText);
+        while ((document.getElementById("log").innerHTML.match(/<br>/g) || []).length > 10) {
+          const firstBreak = document.getElementById("log").innerHTML.indexOf("<br>");
+          document.getElementById("log").innerHTML = document.getElementById("log").innerHTML.substring(firstBreak + 4);
+        }
+      }
+      function handleBLEError(error) {
+        console.error(error);
+        BLEManager.disconnect();
+        if (!BLEManager.bleDevice) return;
+        if (BLEManager.reconnectAttempts <= 5) {
+          BLEManager.reconnectAttempts++;
+          BLEManager.connect();
+        } else {
+          addLog("연결 재시도 실패. 연결 중단.");
+          BLEManager.reconnectAttempts = 0;
+        }
+      }
+      function advertiseData(event) {
+        console.log(event);
+      }
+
+      /* ──────────── 이벤트 리스너 등록 ──────────── */
+      document.getElementById('themeToggle').addEventListener('click', ThemeManager.toggleTheme);
+      document.getElementById('optionsSelect').addEventListener('change', () => {
+        LabelManager.updateParameters();
+      });
+      document.getElementById('imageUpload').addEventListener('change', function() {
+        const file = this.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+              CanvasManager.drawImage(img);
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      // 슬라이더 이동 시 실시간 결과 갱신
+      document.getElementById('luminanceSlider').addEventListener('input', function() {
+        document.getElementById('lumVal').textContent = this.value;
+        CanvasManager.displayOverlay();
+      });
+      document.getElementById('redSlider').addEventListener('input', function() {
+        document.getElementById('redVal').textContent = this.value;
+        CanvasManager.displayOverlay();
+      });
+      document.getElementById('pixlrButton').addEventListener('click', function() {
+        window.open('https://pixlr.com/kr/editor/', '_blank');
+      });
+      document.getElementById('connectButton').addEventListener('click', () => {
+        BLEManager.initiateConnection();
+      });
+      document.getElementById('sendImageButton').addEventListener('click', () => {
+        BLEManager.sendImageData(document.getElementById('pixelData').value);
+      });
+      document.getElementById('clearLogButton').addEventListener('click', function() {
+        document.getElementById('log').innerHTML = '';
+      });
+
+      // 페이지 로드 시 초기화
+      window.onload = function() {
+        CanvasManager.initCanvas();
+      };
+    })();
+  </script>
+</body>
+</html>
