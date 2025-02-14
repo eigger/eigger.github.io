@@ -6,11 +6,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gicisky BLE E-Paper Uploader</title>
+    <title>Gicisky Image Uploader</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap');
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Nanum Gothic', sans-serif;
             text-align: center;
             margin: 20px;
             background-color: #f8f9fa;
@@ -102,8 +103,19 @@
         }
     
         #ble-upload button:hover {
-            background-color: #ddd;
+            background-color: #ddd; /* 기본 hover 스타일 */
         }
+
+        #ble-upload button:disabled {
+            background-color: #ddd; /* 기본 hover 스타일 */
+            opacity: 0.6; /* 약간 흐리게 (선택사항) */
+        }
+
+        #ble-upload button:disabled:hover {
+            cursor: not-allowed; /* 클릭 불가능한 커서 */
+            opacity: 0.6; /* 약간 흐리게 (선택사항) */
+        }
+
         #status {
             text-align: left;
             padding: 10px;
@@ -128,7 +140,7 @@
 
 <body>
     <div class="container">
-        <h1>Gicisky BLE E-Paper Uploader</h1>
+        <h1>Gicisky Image Uploader</h1>
     
         <!-- 라벨 타입 선택 -->
         <div class="select-label">
@@ -153,6 +165,7 @@
             <label><input type="checkbox" id="compressionCheckbox"> Compression</label>
             <label><input type="checkbox" id="secondColorCheckbox"> Second Color</label>
             <label><input type="checkbox" id="mirrorCheckbox"> Mirror</label>
+            <label><input type="checkbox" id="tftCheckbox"> TFT</label>
         </div>
     
         <!-- 이미지 업로드 -->
@@ -170,10 +183,9 @@
         <!-- BLE 업로드 섹션 -->
         <div id="ble-upload">
             <button id="connectbutton" onclick="preConnect();">3. 연결</button>
-            <button onclick="reConnect();">다시 연결</button>
+            <!-- <button id="reconnectbutton" onclick="reConnect();">다시 연결</button> -->
+            <button id="sendimagebutton" onclick="sendimg(document.getElementById('pixelData').value);" disabled>4. 이미지 전송</button>
             <button onclick="document.getElementById('log').innerHTML = '';">로그 정리</button>
-            <br><br>
-            <button onclick="sendimg(document.getElementById('pixelData').value);">4. 이미지 전송</button>
             <div id="status">Upload status</div>
             <div id="log">Logs:</div>
         </div>
@@ -230,21 +242,44 @@
             var compressionEnabled = document.getElementById('compressionCheckbox').checked;
             var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
             var mirrorEnabled = document.getElementById('mirrorCheckbox').checked;
-
+            var tftEnabled = document.getElementById('tftCheckbox').checked;
             var canvas = document.getElementById('myCanvas');
             var ctx = canvas.getContext('2d');
-            var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            var width = canvas.width;
+            var height = canvas.height;
+            var imageData = ctx.getImageData(0, 0, width, height);
+
+            let originalCanvas = document.createElement("canvas");
+            let originalCtx = originalCanvas.getContext("2d");
+            originalCanvas.width = canvas.width;
+            originalCanvas.height = canvas.height;
+            originalCtx.putImageData(imageData, 0, 0);
+
+            if (tftEnabled) {
+                var tempCanvas = document.createElement('canvas');
+                var tempCtx = tempCanvas.getContext('2d');
+                width = canvas.width / 2;
+                height = canvas.height * 2;
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+
+                // 4. 원본 캔버스를 새로운 크기로 그리기 (리사이징)
+                tempCtx.drawImage(originalCanvas, 0, 0, imageData.width, imageData.height, 0, 0, width, height);
+
+                // 5. 리사이즈된 이미지 데이터를 반환
+                imageData = tempCtx.getImageData(0, 0, width, height);
+            }
 
             if (mirrorEnabled) {
                 var tempCanvas = document.createElement('canvas');
                 var tempCtx = tempCanvas.getContext('2d');
-                tempCanvas.width = canvas.width;
-                tempCanvas.height = canvas.height;
+                tempCanvas.width = width;
+                tempCanvas.height = height;
 
-                tempCtx.translate(canvas.width, 0);
+                tempCtx.translate(width, 0);
                 tempCtx.scale(-1, 1);
-                tempCtx.drawImage(canvas, 0, 0, canvas.width, canvas.height);
-                imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+                tempCtx.drawImage(originalCanvas, 0, 0, width, height);
+                imageData = tempCtx.getImageData(0, 0, width, height);
             }
 
             var pixels = imageData.data;
@@ -253,10 +288,9 @@
             var currentByte = 0;
             var currentByteRed = 0;
             var bitPosition = 7;
-
-            for (var x = 0; x < canvas.width; x++) {
-                for (var y = 0; y < canvas.height; y++) {
-                    var curr = ((y * canvas.width) + x) * 4;
+            for (var x = 0; x < width; x++) {
+                for (var y = 0; y < height; y++) {
+                    var curr = (Math.round(y * width) + x) * 4;
                     var r = pixels[curr];
                     var g = pixels[curr + 1];
                     var b = pixels[curr + 2];
@@ -288,12 +322,12 @@
 
             if (compressionEnabled) {
                 var currentPosi = 0;
-                var byte_per_line = canvas.height / 8;
+                var byte_per_line = height / 8;
                 byteDataCompressed.push(0x00);
                 byteDataCompressed.push(0x00);
                 byteDataCompressed.push(0x00);
                 byteDataCompressed.push(0x00);
-                for (var i = 0; i < canvas.width; i += 1) {
+                for (var i = 0; i < width; i += 1) {
                     byteDataCompressed.push(0x75);
                     byteDataCompressed.push(byte_per_line + 7);
                     byteDataCompressed.push(byte_per_line);
@@ -306,7 +340,7 @@
                     }
                 }
                 if (secondColorEnabled) {
-                    for (var i = 0; i < canvas.width; i += 1) {
+                    for (var i = 0; i < width; i += 1) {
                         byteDataCompressed.push(0x75);
                         byteDataCompressed.push(byte_per_line + 7);
                         byteDataCompressed.push(byte_per_line);
@@ -425,15 +459,19 @@
             switch (dispPtype) {
                 case 0:// TFT
                     document.getElementById('mirrorCheckbox').checked = false;
+                    document.getElementById('tftCheckbox').checked = true;
                     break;
                 case 1:// EPA
                     document.getElementById('mirrorCheckbox').checked = false;
+                    document.getElementById('tftCheckbox').checked = false;
                     break;
                 case 2:// EPA1
                     document.getElementById('mirrorCheckbox').checked = false;
+                    document.getElementById('tftCheckbox').checked = false;
                     break;
                 case 3:// EPA2
                     document.getElementById('mirrorCheckbox').checked = false;
+                    document.getElementById('tftCheckbox').checked = false;
                     break;
             }
             switch (availColors) {
@@ -492,7 +530,8 @@
 
         function handleError(error) {
             console.log(error);
-            resetVariables();
+            //resetVariables();
+            disconnect();
             if (bleDevice == null)
                 return;
             if (reconnectTrys <= 5) {
@@ -608,6 +647,8 @@
             resetVariables();
             addLog('Disconnected.');
             document.getElementById("connectbutton").innerHTML = '3. 연결';
+            document.getElementById("connectbutton").disabled = false;
+            document.getElementById("sendimagebutton").disabled = true;
         }
 
         function handleNotify(data) {
@@ -616,21 +657,35 @@
         }
 
         function preConnect() {
+            document.getElementById("connectbutton").disabled = true;
             if (gattServer != null && gattServer.connected) {
-                if (bleDevice != null && bleDevice.gatt.connected)
-                    bleDevice.gatt.disconnect();
+                if (bleDevice != null && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
+                document.getElementById("connectbutton").disabled = false;
             }
             else {
+                document.getElementById("connectbutton").innerHTML = '연결중...';
                 connectTrys = 0;
                 navigator.bluetooth.requestDevice({ 
-                        filters: [{ namePrefix: "NEMR" }, { namePrefix: "PICK" }], 
-                        optionalServices: [0xFEF0]
+                        filters: [
+                            // { namePrefix: "NEMR" }, 
+                            // { namePrefix: "PICK" }, 
+                            { manufacturerData: [{
+                                companyIdentifier: 0x5053,
+                            }]}
+                        ], 
+                        optionalServices: [0xFEF0],
                     }).then(device => {
+                    device.addEventListener('advertisementreceived', advertiseData);
                     device.addEventListener('gattserverdisconnected', disconnect);
                     bleDevice = device;
+                    console.log(device);
                     connect();
                 }).catch(handleError);
             }
+        }
+
+        function advertiseData(event) {
+            console.log(event);
         }
 
         function reConnect() {
@@ -648,10 +703,12 @@
                 bleDevice.gatt.connect().then(server => {
                     console.log('> Found GATT server');
                     gattServer = server;
+                    console.log(server);
                     return gattServer.getPrimaryService(0xFEF0);
                 }).then(service => {
                     console.log('> Found service');
                     Theservice = service;
+                    console.log(service);
                     return Theservice.getCharacteristic(0xFEF2);
                 }).then(characteristic => {
                     addLog('> Found write characteristicImg');
@@ -660,6 +717,8 @@
                 }).then(characteristic => {
                     addLog('> Found write characteristic');
                     document.getElementById("connectbutton").innerHTML = '연결 해제';
+                    document.getElementById("connectbutton").disabled = false;
+                    document.getElementById("sendimagebutton").disabled = false;
                     writeCharacteristic = characteristic;
                     return writeCharacteristic.startNotifications().then(() => {
                         writeCharacteristic.addEventListener('characteristicvaluechanged', event => {
