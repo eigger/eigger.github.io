@@ -12,8 +12,8 @@
       --text-color: #333;
       --primary-color: #007bff;
       --secondary-color: #555;
-      --button-bg: #007bff;
-      --button-hover: #0056b3;
+      --button-bg: #000000;
+      --button-hover: #5e5d5d;
       --container-bg: white;
       --shadow-color: rgba(0, 0, 0, 0.1);
       --status-bg: #f3f3f3;
@@ -23,6 +23,8 @@
       --text-color: #f8f9fa;
       --primary-color: #90caf9;
       --secondary-color: #ccc;
+      --button-bg: #3f3f3f;
+      --button-hover: #a0a0a0;
       --container-bg: #1e1e1e;
       --shadow-color: rgba(255, 255, 255, 0.1);
       --status-bg: #333;
@@ -46,6 +48,10 @@
       color: var(--secondary-color);
       font-size: 14px;
     }
+    label.info {
+      font-size: 13px;
+      margin: 10px;
+    }
     input,
     select,
     button {
@@ -55,15 +61,30 @@
       border: 1px solid #ccc;
       font-size: 14px;
     }
+    input, select {
+      width: 300px;
+      text-align: center;
+      color: var(--text-color);
+      background-color: var(--bg-color);
+    }
     button {
+      width: 200px;
       background-color: var(--button-bg);
       color: #fff;
       cursor: pointer;
       transition: background-color 0.3s;
       border: none;
     }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
     button:hover {
       background-color: var(--button-hover);
+    }
+    button:disabled:hover {
+      background-color: #ccc;
+      cursor: not-allowed;
     }
     .container {
       max-width: 450px;
@@ -73,18 +94,51 @@
       border-radius: 10px;
       box-shadow: 0px 0px 10px var(--shadow-color);
     }
+    .step-container {
+      text-align: left;
+      max-width: 450px;
+      margin: 5px auto;
+      background: var(--container-bg);
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0px 0px 10px var(--shadow-color);
+    }
+    .image-container {
+      border: 0.5px solid rgb(231, 231, 231);
+      max-width: 350px;
+      margin: 5px auto;
+      background: white;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0px 0px 10px var(--shadow-color);
+    }
     .select-label {
       margin: 10px 0;
+      text-align: center;
     }
+    .send-image {
+      margin: 10px 0;
+      text-align: center;
+    }
+
     canvas {
-      border: 1px solid black;
+      border: 1px solid rgb(204, 203, 203);
       display: block;
       margin: 10px auto;
+    }
+    .file-upload {
+      text-align: center;
     }
     #pixelData {
       display: none;
     }
-    #status, #log {
+    .log-view {
+      margin: 10px 0;
+      text-align: center;
+      display: block;
+    }
+    #status {
+      
       text-align: left;
       padding: 10px;
       border-radius: 5px;
@@ -93,17 +147,26 @@
       font-size: 12px;
       margin-top: 10px;
     }
+    #log {
+      text-align: left;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: var(--status-bg);
+      color: var(--text-color);
+      font-size: 12px;
+      margin-top: 10px;
+      height: 100px;
+      overflow: auto;
+    }
     .pixlr-button {
       display: inline-block;
       margin-top: 10px;
       padding: 10px 15px;
-      background-color: var(--button-bg);
-      color: white;
       text-decoration: none;
       border-radius: 5px;
       transition: background-color 0.3s;
       border: none;
-      font-size: 14px;
+      font-size: 12px;
       cursor: pointer;
     }
     .theme-container {
@@ -112,6 +175,7 @@
       align-items: center;
     }
     .theme-toggle {
+      width: 50px;
       font-size: 24px;
       cursor: pointer;
       border: none;
@@ -125,6 +189,7 @@
     }
     .slider-container label {
       font-size: 14px;
+      width: 150px;
     }
   </style>
 </head>
@@ -132,23 +197,28 @@
   <div class="container">
     <!-- 테마 및 제목 영역 -->
     <div class="theme-container">
-      <h1>Gicisky Image Uploader</h1>
+      <h1>전자 라벨 (Gicisky) Image Uploader</h1>
       <button class="theme-toggle" id="themeToggle">☀️</button>
     </div>
 
     <!-- 라벨 타입 선택 (항상 보임) -->
-    <div class="select-label">
-      <label for="optionsSelect">라벨 타입 선택</label>
-      <select id="optionsSelect">
-        <option value="410B">250x122 BWR</option>
-        <option value="40A0">250x132 TFT</option>
-      </select>
+    <div class="step-container">
+      <label>1 단계 : 라벨 타입을 선택 하세요.</label>
+      <div class="select-label">
+        <select id="optionsSelect">
+          <option value="410B">250x122 (2.1인치) 검정 & 흰색 & 빨강</option>
+          <option value="40A0">250x132 (2.1인치) 검정</option>
+        </select>
+      </div>
     </div>
 
     <!-- 이미지 업로드 -->
-    <div class="file-upload">
-      <label for="imageUpload">이미지 선택</label>
-      <input type="file" id="imageUpload" accept="image/*">
+    <div class="step-container">
+      <label>2 단계 : 업로드 할 이미지를 선택 하세요.</label>
+      <div class="file-upload">
+        <input type="file" id="imageUpload" accept="image/*">
+        <button class="pixlr-button" id="pixlrButton">웹 이미지 에디터 (필요시)</button>
+      </div>
     </div>
 
     <!-- Width & Height 설정 -->
@@ -167,30 +237,42 @@
         <label><input type="checkbox" id="mirrorCheckbox"> Mirror</label>
         <label><input type="checkbox" id="tftCheckbox"> TFT</label>
     </div>
-    <!-- 슬라이더 컨트롤 -->
-    <div class="slider-container">
-      <label for="luminanceSlider">Luminance 임계값: <span id="lumVal">128</span></label>
-      <input type="range" id="luminanceSlider" min="0" max="255" value="128">
-    </div>
-    <div class="slider-container">
-      <label for="redSlider">Red 임계값: <span id="redVal">170</span></label>
-      <input type="range" id="redSlider" min="0" max="255" value="170">
-    </div>
 
-    <!-- 캔버스 및 편집 버튼 -->
-    <canvas id="myCanvas" width="250" height="128"></canvas>
-    <button class="pixlr-button" id="pixlrButton">📷 Pixlr에서 이미지 편집</button>
+    <div class="step-container">
+      <label>3 단계 : 이미지의 색상을 조절 하세요.</label>
+      <!-- 캔버스 및 편집 버튼 -->
+      <div class="image-container">
+        <canvas id="myCanvas" width="250" height="128"></canvas>
+      </div>
+      <!-- 슬라이더 컨트롤 -->
+      <div class="slider-container">
+        <label for="luminanceSlider">검정 색상: <span id="lumVal">128</span></label>
+        <input type="range" id="luminanceSlider" min="0" max="255" value="128">
+      </div>
+      <div class="slider-container">
+        <label for="redSlider">빨강 색상: <span id="redVal">170</span></label>
+        <input type="range" id="redSlider" min="0" max="255" value="170">
+      </div>
+    </div>
 
     <!-- 숨김 텍스트영역 (픽셀 데이터 저장) -->
     <textarea id="pixelData"></textarea>
 
     <!-- BLE 업로드 섹션 (필요 시) -->
-    <div id="ble-upload">
-      <button id="connectButton">3. 연결</button>
-      <button id="sendImageButton" disabled>4. 이미지 전송</button>
-      <button id="clearLogButton">로그 정리</button>
-      <div id="status">Upload status</div>
-      <div id="log">Logs:</div>
+    <div class="step-container">
+      <label>4 단계 : 전자라벨에 연결하여 이미지를 업로드 하세요.</label><br>
+      <label class="info">이미지 업로드 버튼을 눌러 전자라벨이 나타날때까지 기다려 주세요.</label><br>
+      <label class="info">ex: 전자라벨 번호 92.12.78.64 -> NEMR92127864 선택</label>
+      <div class="send-image">
+        <button id="connectButton">이미지 업로드</button>
+
+      </div>
+
+      <div class="log-view">
+        <!-- <button id="clearLogButton">로그 정리</button> -->
+        <div id="status"></div>
+        <div id="log"></div>
+      </div>
     </div>
   </div>
 
@@ -343,18 +425,23 @@
             switch (availColors) {
                 case 0:// BW
                     document.getElementById('secondColorCheckbox').checked = false;
+                    document.getElementById('redSlider').disabled = true;
                     break;
                 case 1:// BWR
                     document.getElementById('secondColorCheckbox').checked = true;
+                    document.getElementById('redSlider').disabled = false;
                     break;
                 case 2:// BWY
                     document.getElementById('secondColorCheckbox').checked = true;
+                    document.getElementById('redSlider').disabled = false;
                     break;
                 case 3:// BWRY
                     document.getElementById('secondColorCheckbox').checked = true;
+                    document.getElementById('redSlider').disabled = false;
                     break;
                 case 4:// BWRGBYO
                     document.getElementById('secondColorCheckbox').checked = true;
+                    document.getElementById('redSlider').disabled = false;
                     break;
             }
             switch (singleDoubleMirror) {
@@ -381,6 +468,7 @@
           // 슬라이더 값 읽기
           const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
           const redThreshold = parseInt(document.getElementById('redSlider').value);
+          var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
 
           for (let i = 0; i < origData.data.length; i += 4) {
             const r = origData.data[i];
@@ -402,7 +490,7 @@
             }
 
             // 빨강 오버레이: r > redThreshold && g < redThreshold이면 빨강, 아니면 투명
-            if (r > redThreshold && g < redThreshold) {
+            if (secondColorEnabled && r > redThreshold && g < redThreshold) {
               redOverlayData.data[i]     = 255;
               redOverlayData.data[i + 1] = 0;
               redOverlayData.data[i + 2] = 0;
@@ -644,7 +732,6 @@
           this.bleService = null;
           this.writeChar = null;
           this.writeImageChar = null;
-          document.getElementById("log").innerHTML = '';
           this.imgHexData = "";
           this.imgHexLength = 0;
           this.uploadPartIndex = 0;
@@ -662,7 +749,7 @@
         },
         async sendCommandHex(cmdHex) {
           const cmd = Utils.hexToBytes(cmdHex);
-          addLog('Send CMD: ' + cmdHex);
+          addLog('송신 데이터 : ' + cmdHex);
           await this.sendCommand(cmd);
         },
         async sendImageCommand(cmd) {
@@ -676,11 +763,13 @@
             }
           }
         },
-        sendImageData(imgData) {
+        sendImageData() {
+          imgData = document.getElementById('pixelData').value
           this.imgHexData = imgData.replace(/(?:\r\n|\r|\n|,|0x| )/g, '');
           this.imgHexLength = this.imgHexData.length;
           this.uploadPartIndex = 0;
-          console.log('Sending image of size ' + this.imgHexLength / 2);
+          addLog("이미지 업로드");
+          setStatus("이미지 업로드 시작");
           this.sendCommandHex("01");
         },
         handleImageState(dataHex) {
@@ -697,12 +786,13 @@
               break;
             case "05":
               if (dataHex.substring(2, 4) === "08") {
-                addLog("이미지 업로드 완료, 연결 재설정 중");
+                addLog("이미지 업로드 완료");
+                setStatus("이미지 업로드 완료");
                 if (this.gattServer && this.gattServer.connected) {
                   if (this.bleDevice && this.bleDevice.gatt.connected)
                     this.bleDevice.gatt.disconnect();
+                    this.disconnect();
                 }
-                setTimeout(() => this.reConnect(), 5000);
               } else if (dataHex.substring(2, 4) !== "00") {
                 addLog("업로드 중 오류 발생, 전송 중단!");
               } else {
@@ -718,7 +808,6 @@
             if (partAckHex === Utils.intToHex(this.uploadPartIndex)) {
               currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, 480);
               this.imgHexData = this.imgHexData.substring(480);
-              setBLEStatus('Current part: ' + this.uploadPartIndex);
               this.uploadPartIndex++;
             } else {
               addLog("오류 발생, 마지막 부분 재전송");
@@ -733,21 +822,20 @@
         disconnect() {
           this.reset();
           addLog('연결 해제됨.');
-          document.getElementById("connectButton").innerHTML = '3. 연결';
           document.getElementById("connectButton").disabled = false;
-          document.getElementById("sendImageButton").disabled = true;
         },
         handleNotification(data) {
-          addLog("Received bytes: " + Utils.bytesToHex(data.buffer));
+          addLog("수신 데이터 : " + Utils.bytesToHex(data.buffer));
           setTimeout(() => this.handleImageState(Utils.bytesToHex(data.buffer)), 50);
         },
         initiateConnection() {
+          document.getElementById("log").innerHTML = '';
           document.getElementById("connectButton").disabled = true;
+          setStatus("라벨 선택중...");
           if (this.gattServer && this.gattServer.connected) {
             if (this.bleDevice && this.bleDevice.gatt.connected) this.bleDevice.gatt.disconnect();
             document.getElementById("connectButton").disabled = false;
           } else {
-            document.getElementById("connectButton").innerHTML = '연결중...';
             this.reconnectAttempts = 0;
             navigator.bluetooth.requestDevice({
               filters: [
@@ -755,10 +843,9 @@
               ],
               optionalServices: [0xFEF0]
             }).then(device => {
-              device.addEventListener('advertisementreceived', advertiseData);
+              setStatus("연결중 : " + device.name);
               device.addEventListener('gattserverdisconnected', () => this.disconnect());
               this.bleDevice = device;
-              console.log(device);
               this.connect();
             }).catch(handleBLEError);
           }
@@ -773,25 +860,19 @@
         },
         connect() {
           if (!this.writeChar) {
-            addLog("Connecting to: " + this.bleDevice.name);
+            addLog("연결중 : " + this.bleDevice.name);
             this.bleDevice.gatt.connect().then(server => {
-              console.log('> Found GATT server');
               this.gattServer = server;
               return this.gattServer.getPrimaryService(0xFEF0);
             }).then(service => {
-              console.log('> Found service');
               this.bleService = service;
               return this.bleService.getCharacteristic(0xFEF2);
             }).then(characteristic => {
-              addLog('> Found write characteristic for image');
               this.writeImageChar = characteristic;
               return this.bleService.getCharacteristic(0xFEF1);
             }).then(characteristic => {
-              addLog('> Found write characteristic');
-              document.getElementById("connectButton").innerHTML = '연결 해제';
-              document.getElementById("connectButton").disabled = false;
-              document.getElementById("sendImageButton").disabled = false;
               this.writeChar = characteristic;
+              setTimeout(() => this.sendImageData(), 1000);
               return this.writeChar.startNotifications().then(() => {
                 this.writeChar.addEventListener('characteristicvaluechanged', event => {
                   this.handleNotification(event.target.value);
@@ -799,11 +880,10 @@
               });
             }).catch(handleBLEError);
           }
-        }
-      };
-
+        },
+      }
       /* ──────────── BLE 상태 및 로그 헬퍼 ──────────── */
-      function setBLEStatus(statusText) {
+      function setStatus(statusText) {
         document.getElementById("status").innerHTML = statusText;
       }
       function addLog(logText) {
@@ -813,25 +893,18 @@
                      ("0" + now.getSeconds()).slice(-2) + " : ";
         document.getElementById("log").innerHTML += time + logText + '<br>';
         console.log(time + logText);
-        while ((document.getElementById("log").innerHTML.match(/<br>/g) || []).length > 10) {
+        while ((document.getElementById("log").innerHTML.match(/<br>/g) || []).length > 100) {
           const firstBreak = document.getElementById("log").innerHTML.indexOf("<br>");
           document.getElementById("log").innerHTML = document.getElementById("log").innerHTML.substring(firstBreak + 4);
         }
       }
       function handleBLEError(error) {
         console.error(error);
+        setStatus("에러 : " + error);
         BLEManager.disconnect();
-        if (!BLEManager.bleDevice) return;
-        if (BLEManager.reconnectAttempts <= 5) {
-          BLEManager.reconnectAttempts++;
-          BLEManager.connect();
-        } else {
-          addLog("연결 재시도 실패. 연결 중단.");
-          BLEManager.reconnectAttempts = 0;
+        if (BLEManager.bleDevice && BLEManager.bleDevice.gatt.connected) {
+          BLEManager.bleDevice.gatt.disconnect();
         }
-      }
-      function advertiseData(event) {
-        console.log(event);
       }
 
       /* ──────────── 이벤트 리스너 등록 ──────────── */
@@ -868,12 +941,12 @@
       document.getElementById('connectButton').addEventListener('click', () => {
         BLEManager.initiateConnection();
       });
-      document.getElementById('sendImageButton').addEventListener('click', () => {
-        BLEManager.sendImageData(document.getElementById('pixelData').value);
-      });
-      document.getElementById('clearLogButton').addEventListener('click', function() {
-        document.getElementById('log').innerHTML = '';
-      });
+      // document.getElementById('sendImageButton').addEventListener('click', () => {
+      //   BLEManager.sendImageData(document.getElementById('pixelData').value);
+      // });
+      // document.getElementById('clearLogButton').addEventListener('click', function() {
+      //   document.getElementById('log').innerHTML = '';
+      // });
 
       // 페이지 로드 시 초기화
       window.onload = function() {
