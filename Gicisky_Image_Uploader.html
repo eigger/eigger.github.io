@@ -142,7 +142,6 @@
       display: block;
     }
     #status {
-      
       text-align: left;
       padding: 10px;
       border-radius: 5px;
@@ -246,7 +245,8 @@
     </div>
 
     <div class="step-container">
-      <label>3 단계 : 이미지의 색상을 조절 하세요.</label>
+      <label>3 단계 : 이미지의 색상을 조절 하세요.</label><br>
+      <label class="info">드래그 : 이동, 휠 : 확대 & 축소</label><br>
       <!-- 캔버스 및 편집 버튼 -->
       <div class="image-container">
         <canvas id="myCanvas" width="250" height="128"></canvas>
@@ -272,7 +272,6 @@
       <label class="info">ex: 전자라벨 번호 92.12.78.64 -> NEMR92127864 선택</label>
       <div class="send-image">
         <button id="connectButton">이미지 업로드</button>
-
       </div>
 
       <div class="log-view">
@@ -331,6 +330,12 @@
         canvas: document.getElementById('myCanvas'),
         ctx: document.getElementById('myCanvas').getContext('2d'),
         originalImageData: null, // 업로드된 원본 이미지 데이터를 저장
+        image: null,  // 드래그 이동 및 확대/축소를 위한 이미지 저장
+        scale: 1,
+        newW: 0,
+        newH: 0,
+        offsetX: 0,
+        offsetY: 0,
         initCanvas() {
           const width = parseInt(document.getElementById('widthInput')?.value || 250);
           const height = parseInt(document.getElementById('heightInput')?.value || 128);
@@ -362,10 +367,8 @@
             else
                 document.getElementById('compressionCheckbox').checked = false;
 
-
             switch (screenResolution) {
                 case 0:
-                widthInput
                     document.getElementById('heightInput').value = "104";
                     document.getElementById('widthInput').value = "212";
                     break;
@@ -660,24 +663,34 @@
                 }
             }
             pixelDataTextarea.value = Utils.bufferToHex(byteDataCompressed);
-
         },
         /* 이미지 업로드 시 원본 이미지를 캔버스에 그리고 저장 */
         drawImage(img) {
+          this.image = img;  // 로드된 이미지를 저장합니다.
           const canvasW = this.canvas.width;
           const canvasH = this.canvas.height;
-          const ctx = this.ctx;
+          // 기본 스케일은 캔버스에 꽉 차게 계산
           const scale = Math.max(canvasW / img.width, canvasH / img.height);
-          const newW = img.width * scale;
-          const newH = img.height * scale;
-          const offsetX = (canvasW - newW) / 2;
-          const offsetY = (canvasH - newH) / 2;
-          ctx.clearRect(0, 0, canvasW, canvasH);
-          ctx.fillStyle = 'white';
-          ctx.fillRect(0, 0, canvasW, canvasH);
-          ctx.drawImage(img, offsetX, offsetY, newW, newH);
-          // 원본 이미지를 저장
-          this.originalImageData = ctx.getImageData(0, 0, canvasW, canvasH);
+          this.scale = scale;
+          this.newW = img.width * scale;
+          this.newH = img.height * scale;
+          // 초기 오프셋은 중앙 정렬
+          this.offsetX = (canvasW - this.newW) / 2;
+          this.offsetY = (canvasH - this.newH) / 2;
+          // 이미지 렌더링(오버레이 포함)
+          this.render();
+        },
+        // render() 함수: 현재 오프셋과 스케일을 반영하여 이미지를 다시 그립니다.
+        render() {
+          const canvasW = this.canvas.width;
+          const canvasH = this.canvas.height;
+          this.ctx.clearRect(0, 0, canvasW, canvasH);
+          this.ctx.fillStyle = 'white';
+          this.ctx.fillRect(0, 0, canvasW, canvasH);
+          // 저장된 이미지와 현재 오프셋, 크기를 이용해 이미지를 그립니다.
+          this.ctx.drawImage(this.image, this.offsetX, this.offsetY, this.newW, this.newH);
+          // 오버레이 처리를 위해 현재 캔버스의 이미지 데이터를 저장한 후 displayOverlay() 호출
+          this.originalImageData = this.ctx.getImageData(0, 0, canvasW, canvasH);
           this.displayOverlay();
         },
         applyDithering() {
@@ -954,18 +967,82 @@
       document.getElementById('connectButton').addEventListener('click', () => {
         BLEManager.initiateConnection();
       });
-      // document.getElementById('sendImageButton').addEventListener('click', () => {
-      //   BLEManager.sendImageData(document.getElementById('pixelData').value);
-      // });
-      // document.getElementById('clearLogButton').addEventListener('click', function() {
-      //   document.getElementById('log').innerHTML = '';
-      // });
-
       // 페이지 로드 시 초기화
       window.onload = function() {
         LabelManager.updateParameters();
         BLEManager.checkSupport();
       };
+
+      // ────────── 캔버스 드래그, 커서 변경 및 확대/축소 기능 추가 ──────────
+      (function() {
+        const canvas = CanvasManager.canvas;
+        let isDragging = false;
+        let startX, startY;
+
+        // 마우스 오버 시 이동 가능한 커서로 변경
+        canvas.addEventListener('mouseenter', () => {
+          canvas.style.cursor = "grab";
+        });
+        canvas.addEventListener('mouseleave', () => {
+          canvas.style.cursor = "default";
+          isDragging = false;
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+          isDragging = true;
+          startX = e.offsetX;
+          startY = e.offsetY;
+          canvas.style.cursor = "grabbing";
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          // 드래그한 거리 계산
+          const dx = e.offsetX - startX;
+          const dy = e.offsetY - startY;
+          // CanvasManager의 오프셋 업데이트
+          CanvasManager.offsetX += dx;
+          CanvasManager.offsetY += dy;
+          // 시작 좌표 갱신
+          startX = e.offsetX;
+          startY = e.offsetY;
+          // 새 오프셋에 맞게 다시 렌더링
+          CanvasManager.render();
+        });
+
+        canvas.addEventListener('mouseup', () => {
+          isDragging = false;
+          canvas.style.cursor = "grab";
+        });
+        
+        // 마우스 휠 이벤트: 확대/축소
+        canvas.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoomFactor = 1.1;
+          const oldScale = CanvasManager.scale;
+          let newScale;
+          if (e.deltaY < 0) {  // 확대
+            newScale = oldScale * zoomFactor;
+          } else {             // 축소
+            newScale = oldScale / zoomFactor;
+          }
+          // 현재 마우스 좌표를 기준으로 확대/축소
+          const rect = canvas.getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
+          // 이미지 상의 좌표 (기존 스케일 기준)
+          const imageX = (mouseX - CanvasManager.offsetX) / oldScale;
+          const imageY = (mouseY - CanvasManager.offsetY) / oldScale;
+          // 새로운 스케일 적용
+          CanvasManager.scale = newScale;
+          CanvasManager.newW = CanvasManager.image.width * newScale;
+          CanvasManager.newH = CanvasManager.image.height * newScale;
+          // 마우스 위치가 이미지 내 동일 위치가 되도록 오프셋 보정
+          CanvasManager.offsetX = mouseX - imageX * newScale;
+          CanvasManager.offsetY = mouseY - imageY * newScale;
+          CanvasManager.render();
+        });
+      })();
     })();
   </script>
 </body>
