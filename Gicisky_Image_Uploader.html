@@ -86,6 +86,9 @@
       background-color: #ccc;
       cursor: not-allowed;
     }
+    #ble-support {
+      color: red;
+    }
     .container {
       max-width: 450px;
       margin: 0 auto;
@@ -199,6 +202,9 @@
     <div class="theme-container">
       <h1>전자 라벨 (Gicisky) Image Uploader</h1>
       <button class="theme-toggle" id="themeToggle">☀️</button>
+    </div>
+    <div class="info">
+      <div id="ble-support"></div>
     </div>
 
     <!-- 라벨 타입 선택 (항상 보임) -->
@@ -727,6 +733,12 @@
         imgHexData: "",
         imgHexLength: 0,
         uploadPartIndex: 0,
+        checkSupport() {
+          if (!navigator.bluetooth) {
+            document.getElementById("ble-support").innerHTML = "해당 브라우저는 Web Bluetooth를 지원하지 않습니다.";
+            document.getElementById("connectButton").disabled = true;
+          }
+        },
         reset() {
           this.gattServer = null;
           this.bleService = null;
@@ -951,6 +963,7 @@
       // 페이지 로드 시 초기화
       window.onload = function() {
         LabelManager.updateParameters();
+        BLEManager.checkSupport();
       };
     })();
   </script>
