@@ -37,6 +37,10 @@
       color: var(--text-color);
       transition: background-color 0.3s, color 0.3s;
     }
+    .version {
+      text-align: left;
+      font-size: 12px;
+    }
     h1, h2 {
       color: var(--primary-color);
       margin-bottom: 10px;
@@ -92,7 +96,7 @@
       font-weight: bold;
     }
     .container {
-      max-width: 450px;
+      max-width: 550px;
       margin: 0 auto;
       background: var(--container-bg);
       padding: 15px;
@@ -101,7 +105,7 @@
     }
     .step-container {
       text-align: left;
-      max-width: 450px;
+      max-width: 550px;
       margin: 5px auto;
       background: var(--container-bg);
       padding: 15px;
@@ -175,7 +179,7 @@
     }
     .theme-container {
       display: flex;
-      justify-content: space-evenly;
+      /* justify-content: space-evenly; */
       align-items: center;
     }
     .theme-toggle {
@@ -201,8 +205,8 @@
   <div class="container">
     <!-- 테마 및 제목 영역 -->
     <div class="theme-container">
-      <h1>전자 라벨 (Gicisky) Image Uploader</h1>
       <button class="theme-toggle" id="themeToggle">☀️</button>
+      <h1>전자 라벨 (Gicisky) Image Uploader</h1>
     </div>
     <div class="info">
       <div id="ble-support"></div>
@@ -213,8 +217,10 @@
       <label>1 단계 : 라벨 타입을 선택 하세요.</label>
       <div class="select-label">
         <select id="optionsSelect">
-          <option value="410B">250x122 (2.1인치) 검정 & 흰색 & 빨강</option>
-          <option value="40A0">250x132 (2.1인치) 검정</option>
+          <option value="410B">2.1인치 (250x122) 검정 & 흰색 & 빨강</option>
+          <option value="0032">2.9인치 (296x128) 검정 & 흰색 & 빨강</option>
+          <option value="004B">4.2인치 (400x300) 검정 & 흰색 & 빨강</option>
+          <option value="40A0">2.1인치 (250x132) 검정</option>
         </select>
       </div>
     </div>
@@ -224,7 +230,7 @@
       <label>2 단계 : 업로드 할 이미지를 선택 하세요.</label>
       <div class="file-upload">
         <input type="file" id="imageUpload" accept="image/*">
-        <button class="pixlr-button" id="pixlrButton">웹 이미지 에디터 (필요시)</button>
+        <!-- <button class="pixlr-button" id="pixlrButton">웹 이미지 에디터 (필요시)</button> -->
       </div>
     </div>
 
@@ -246,10 +252,10 @@
     </div>
 
     <div class="step-container">
-      <label>3 단계 : 이미지의 색상을 조절 하세요.</label><br>
-      <label class="info">드래그 : 이동, 휠 : 확대 & 축소</label><br>
+      <label>3 단계 : 이미지의 크기 및 색상을 조절 하세요.</label><br>
+      <label class="info">- 이미지를 드래그 or 휠을 사용하여 조절 하세요.</label><br>
       <!-- 캔버스 및 편집 버튼 -->
-      <div class="image-container">
+      <div class="image-container" id="myImage">
         <canvas id="myCanvas" width="250" height="128"></canvas>
       </div>
       <!-- 슬라이더 컨트롤 -->
@@ -269,10 +275,10 @@
     <!-- BLE 업로드 섹션 (필요 시) -->
     <div class="step-container">
       <label>4 단계 : 전자라벨에 연결하여 이미지를 업로드 하세요.</label><br>
-      <label class="info">이미지 업로드 버튼을 눌러 전자라벨이 나타날때까지 기다려 주세요.</label><br>
-      <label class="info">ex: 전자라벨 번호 92.12.78.64 -> NEMR92127864 선택</label>
+      <label class="info">- 이미지 업로드 버튼을 눌러 전자라벨이 나타날때까지 기다려 주세요.</label><br>
+      <label class="info">- ex: 전자라벨 번호 92.12.78.64 -> NEMR92127864 선택</label>
       <div class="send-image">
-        <button id="connectButton">이미지 업로드</button>
+        <button id="uploadButton">이미지 업로드</button>
       </div>
 
       <div class="log-view">
@@ -281,6 +287,14 @@
         <div id="log"></div>
       </div>
     </div>
+    <div class="step-container">
+      <div class="version">
+        Version : 250217
+        <a href="https://github.com/eigger/eigger.github.io" target="_blank">GitHub (eigger)</a>
+      </div>
+
+    </div>
+
   </div>
 
   <!-- JavaScript: 기능별 모듈화 (슬라이더 오버레이 적용 및 pixelData 갱신) -->
@@ -338,11 +352,21 @@
         offsetX: 0,
         offsetY: 0,
         initCanvas() {
+          document.getElementById('imageUpload').value = '';
           const width = parseInt(document.getElementById('widthInput')?.value || 250);
           const height = parseInt(document.getElementById('heightInput')?.value || 128);
+          var tftEnabled = document.getElementById('tftCheckbox').checked;
+          this.originalImageData = null;
+          this.image = null;
+          this.scale = 1;
+          this.newW = 0;
+          this.newH = 0;
+          this.offsetX = 0;
+          this.offsetY = 0;
           this.canvas.width = width;
           this.canvas.height = height;
           this.ctx.fillStyle = 'white';
+          if (tftEnabled) this.ctx.fillStyle = '#969696'; 
           this.ctx.fillRect(0, 0, width, height);
         },
         
@@ -372,46 +396,57 @@
                 case 0:
                     document.getElementById('heightInput').value = "104";
                     document.getElementById('widthInput').value = "212";
+                    document.getElementById('myImage').style.maxWidth = '312';
                     break;
                 case 1:
                     document.getElementById('heightInput').value = "128";
                     document.getElementById('widthInput').value = "296";
+                    document.getElementById('myImage').style.maxWidth = '396px';
                     break;
                 case 2:
-                    document.getElementById('heightInput').value = "400";
-                    document.getElementById('widthInput').value = "300";
+                    document.getElementById('heightInput').value = "300";
+                    document.getElementById('widthInput').value = "400";
+                    document.getElementById('myImage').style.maxWidth = '450px';
                     break;
                 case 3:
                     document.getElementById('heightInput').value = "384";
                     document.getElementById('widthInput').value = "640";
+                    document.getElementById('myImage').style.maxWidth = '740px';
                     break;
                 case 4:
                     document.getElementById('heightInput').value = "640";
                     document.getElementById('widthInput').value = "960";
+                    document.getElementById('myImage').style.maxWidth = '1100px';
                     break;
                 case 5:
                     document.getElementById('heightInput').value = "132";
                     document.getElementById('widthInput').value = "250";
+                    document.getElementById('myImage').style.maxWidth = '350px';
                     break;
                 case 6:
                     document.getElementById('heightInput').value = "96";
                     document.getElementById('widthInput').value = "196";
+                    document.getElementById('myImage').style.maxWidth = '296px';
                     break;
                 case 7:
                     document.getElementById('heightInput').value = "480";
                     document.getElementById('widthInput').value = "640";
+                    document.getElementById('myImage').style.maxWidth = '690px';
                     break;
                 case 8:
                     document.getElementById('heightInput').value = "128";
                     document.getElementById('widthInput').value = "250";
+                    document.getElementById('myImage').style.maxWidth = '350px';
                     break;
                 case 9:
                     document.getElementById('heightInput').value = "800";
                     document.getElementById('widthInput').value = "480";
+                    document.getElementById('myImage').style.maxWidth = '530px';
                     break;
                 case 10:
                     document.getElementById('heightInput').value = "480";
                     document.getElementById('widthInput').value = "280";
+                    document.getElementById('myImage').style.maxWidth = '330px';
                     break;
             }
 
@@ -419,18 +454,22 @@
                 case 0:// TFT
                     document.getElementById('mirrorCheckbox').checked = false;
                     document.getElementById('tftCheckbox').checked = true;
+                    document.getElementById('myImage').style.background = '#ccc';
                     break;
                 case 1:// EPA
                     document.getElementById('mirrorCheckbox').checked = false;
                     document.getElementById('tftCheckbox').checked = false;
+                    document.getElementById('myImage').style.background = 'white';
                     break;
                 case 2:// EPA1
                     document.getElementById('mirrorCheckbox').checked = false;
                     document.getElementById('tftCheckbox').checked = false;
+                    document.getElementById('myImage').style.background = 'white';
                     break;
                 case 3:// EPA2
                     document.getElementById('mirrorCheckbox').checked = false;
                     document.getElementById('tftCheckbox').checked = false;
+                    document.getElementById('myImage').style.background = 'white';
                     break;
             }
             switch (availColors) {
@@ -480,6 +519,7 @@
           const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
           const redThreshold = parseInt(document.getElementById('redSlider').value);
           var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
+          var tftEnabled = document.getElementById('tftCheckbox').checked;
 
           for (let i = 0; i < origData.data.length; i += 4) {
             const r = origData.data[i];
@@ -493,6 +533,12 @@
               bwData.data[i + 1] = 255;
               bwData.data[i + 2] = 255;
               bwData.data[i + 3] = 255;
+              if (tftEnabled) {
+                bwData.data[i]     = 150;
+                bwData.data[i + 1] = 150;
+                bwData.data[i + 2] = 150;
+                bwData.data[i + 3] = 255;
+              }
             } else {
               bwData.data[i]     = 0;
               bwData.data[i + 1] = 0;
@@ -748,10 +794,11 @@
         imgHexData: "",
         imgHexLength: 0,
         uploadPartIndex: 0,
+        serviceUuid: 0,
         checkSupport() {
           if (!navigator.bluetooth) {
             document.getElementById("ble-support").innerHTML = "해당 브라우저는 Web Bluetooth를 지원하지 않습니다.<br>PC Chrome 브라우저 에서 시도하세요";
-            document.getElementById("connectButton").disabled = true;
+            document.getElementById("uploadButton").disabled = true;
           }
         },
         reset() {
@@ -762,6 +809,7 @@
           this.imgHexData = "";
           this.imgHexLength = 0;
           this.uploadPartIndex = 0;
+          this.serviceUuid = 0;
         },
         async sendCommand(cmd) {
           if (this.writeChar) {
@@ -849,7 +897,7 @@
         disconnect() {
           this.reset();
           addLog('연결 해제됨.');
-          document.getElementById("connectButton").disabled = false;
+          document.getElementById("uploadButton").disabled = false;
         },
         handleNotification(data) {
           addLog("수신 데이터 : " + Utils.bytesToHex(data.buffer));
@@ -857,18 +905,18 @@
         },
         initiateConnection() {
           document.getElementById("log").innerHTML = '';
-          document.getElementById("connectButton").disabled = true;
+          document.getElementById("uploadButton").disabled = true;
           setStatus("라벨 선택중...");
           if (this.gattServer && this.gattServer.connected) {
             if (this.bleDevice && this.bleDevice.gatt.connected) this.bleDevice.gatt.disconnect();
-            document.getElementById("connectButton").disabled = false;
+            document.getElementById("uploadButton").disabled = false;
           } else {
             this.reconnectAttempts = 0;
             navigator.bluetooth.requestDevice({
               filters: [
                 { manufacturerData: [{ companyIdentifier: 0x5053 }] }
               ],
-              optionalServices: [0xFEF0]
+              optionalServices: [0xFEF0, 0xFDF0]
             }).then(device => {
               setStatus("연결중 : " + device.name);
               device.addEventListener('gattserverdisconnected', () => this.disconnect());
@@ -890,13 +938,22 @@
             addLog("연결중 : " + this.bleDevice.name);
             this.bleDevice.gatt.connect().then(server => {
               this.gattServer = server;
-              return this.gattServer.getPrimaryService(0xFEF0);
+              return this.gattServer.getPrimaryServices();
+            }).then(services => {
+              services.forEach(service => {
+                if (this.serviceUuid == 0) {
+                  this.serviceUuid = parseInt(service.uuid.substring(4, 8), 16);
+                  addLog("Service UUID : " + service.uuid.toString());
+                  addLog("UUID : 0x" + this.serviceUuid.toString(16));
+                }
+              });
+              return this.gattServer.getPrimaryService(this.serviceUuid);
             }).then(service => {
               this.bleService = service;
-              return this.bleService.getCharacteristic(0xFEF2);
+              return this.bleService.getCharacteristic(this.serviceUuid + 2);
             }).then(characteristic => {
               this.writeImageChar = characteristic;
-              return this.bleService.getCharacteristic(0xFEF1);
+              return this.bleService.getCharacteristic(this.serviceUuid + 1);
             }).then(characteristic => {
               this.writeChar = characteristic;
               setTimeout(() => this.sendImageData(), 1000);
@@ -965,7 +1022,7 @@
       document.getElementById('pixlrButton').addEventListener('click', function() {
         window.open('https://pixlr.com/kr/editor/', '_blank');
       });
-      document.getElementById('connectButton').addEventListener('click', () => {
+      document.getElementById('uploadButton').addEventListener('click', () => {
         BLEManager.initiateConnection();
       });
       // 페이지 로드 시 초기화
