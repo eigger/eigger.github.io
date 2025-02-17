@@ -750,7 +750,7 @@
         uploadPartIndex: 0,
         checkSupport() {
           if (!navigator.bluetooth) {
-            document.getElementById("ble-support").innerHTML = "해당 브라우저는 Web Bluetooth를 지원하지 않습니다.\nPC Chrome 브라우저 에서 시도하세요";
+            document.getElementById("ble-support").innerHTML = "해당 브라우저는 Web Bluetooth를 지원하지 않습니다.<br>PC Chrome 브라우저 에서 시도하세요";
             document.getElementById("connectButton").disabled = true;
           }
         },
