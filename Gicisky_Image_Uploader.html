@@ -340,6 +340,7 @@
 
       /* ──────────── 캔버스 관리 ──────────── */
       const CanvasManager = {
+        container: document.getElementById("myImage"),
         canvas: document.getElementById('myCanvas'),
         ctx: document.getElementById('myCanvas').getContext('2d'),
         originalImageData: null, // 업로드된 원본 이미지 데이터를 저장
@@ -363,6 +364,11 @@
           this.offsetY = 0;
           this.canvas.width = width;
           this.canvas.height = height;
+          if (this.canvas.width > this.container.clientWidth - 15)
+          {
+            this.canvas.style.width = `${this.container.clientWidth - 15}px`;            
+          }
+
           this.ctx.fillStyle = 'white';
           if (tftEnabled) this.ctx.fillStyle = '#969696'; 
           this.ctx.fillRect(0, 0, width, height);
