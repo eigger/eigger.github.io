@@ -32,7 +32,7 @@
     body {
       font-family: 'Nanum Gothic', sans-serif;
       text-align: center;
-      margin: 20px;
+      margin: 0px;
       background-color: var(--bg-color);
       color: var(--text-color);
       transition: background-color 0.3s, color 0.3s;
@@ -59,21 +59,20 @@
     input,
     select,
     button {
-      padding: 8px;
-      margin: 5px;
+      padding: 3px;
+      margin: 3px;
       border-radius: 5px;
       border: 1px solid #ccc;
       font-size: 14px;
     }
     input, select {
-      max-width: 300px;
-      min-width: 200px;
+      min-width: 150px;
       text-align: center;
       color: var(--text-color);
       background-color: var(--bg-color);
     }
     button {
-      width: 200px;
+      max-width: 200px;
       background-color: var(--button-bg);
       color: #fff;
       cursor: pointer;
@@ -99,7 +98,7 @@
       max-width: 550px;
       margin: 0 auto;
       background: var(--container-bg);
-      padding: 15px;
+      padding: 3px;
       border-radius: 10px;
       box-shadow: 0px 0px 10px var(--shadow-color);
     }
@@ -108,7 +107,7 @@
       max-width: 550px;
       margin: 5px auto;
       background: var(--container-bg);
-      padding: 15px;
+      padding: 3px;
       border-radius: 10px;
       box-shadow: 0px 0px 10px var(--shadow-color);
     }
@@ -117,7 +116,7 @@
       max-width: 350px;
       margin: 5px auto;
       background: white;
-      padding: 15px;
+      padding: 3px;
       border-radius: 15px;
       box-shadow: 0px 0px 10px var(--shadow-color);
     }
@@ -183,21 +182,21 @@
       align-items: center;
     }
     .theme-toggle {
-      width: 50px;
+      max-width: 50px;
       font-size: 24px;
       cursor: pointer;
       border: none;
       background: none;
     }
     .slider-container {
-      margin: 10px 0;
+      margin: 0 auto;
       display: flex;
       justify-content: space-around;
       align-items: center;
     }
     .slider-container label {
       font-size: 14px;
-      width: 150px;
+      max-width: 150px;
     }
   </style>
 </head>
@@ -254,7 +253,7 @@
       <label class="info">- 이미지를 드래그 or 휠을 사용하여 조절 하세요.</label><br>
       <!-- 캔버스 및 편집 버튼 -->
       <div class="image-container" id="myImage">
-        <canvas id="myCanvas" width="250" height="128"></canvas>
+        <canvas id="myCanvas"></canvas>
       </div>
       <!-- 슬라이더 컨트롤 -->
       <div class="slider-container">
@@ -288,7 +287,7 @@
     </div>
     <div class="step-container">
       <div class="version">
-        Version : 250221
+        Version : 250225
         <a href="https://github.com/eigger/eigger.github.io" target="_blank">GitHub (eigger)</a>
       </div>
 
