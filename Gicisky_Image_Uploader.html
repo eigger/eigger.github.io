@@ -230,6 +230,7 @@
       <div class="file-upload">
         <input type="file" id="imageUpload" accept="image/*">
         <!-- <button class="pixlr-button" id="pixlrButton">웹 이미지 에디터 (필요시)</button> -->
+        <button id="saveButton">저장하기</button>
       </div>
     </div>
 
@@ -355,6 +356,7 @@
           const width = parseInt(document.getElementById('widthInput')?.value || 250);
           const height = parseInt(document.getElementById('heightInput')?.value || 128);
           var tftEnabled = document.getElementById('tftCheckbox').checked;
+          document.getElementById("saveButton").disabled = true;
           this.originalImageData = null;
           this.image = null;
           this.scale = 1;
@@ -645,6 +647,7 @@
         },
         /* 이미지 업로드 시 원본 이미지를 캔버스에 그리고 저장 */
         drawImage(img) {
+          document.getElementById("saveButton").disabled = false;
           this.image = img;  // 로드된 이미지를 저장합니다.
           const canvasW = this.canvas.width;
           const canvasH = this.canvas.height;
@@ -676,6 +679,15 @@
           if (r > 128 && g < 128 && b < 128) return [255, 0, 0];
           const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
           return luminance < 85 ? [0, 0, 0] : [255, 255, 255];
+        },
+        saveImage() {
+          // PNG 포맷으로 Data URI 생성
+          const dataURL = this.canvas.toDataURL('image/png');
+          // 링크 생성 후 자동 클릭
+          const link = document.createElement('a');
+          link.href = dataURL;
+          link.download = 'image.png';  // 저장될 파일 이름
+          link.click();
         }
       };
 
@@ -930,6 +942,9 @@
       <!-- }); -->
       document.getElementById('uploadButton').addEventListener('click', () => {
         BLEManager.initiateConnection();
+      });
+      document.getElementById('saveButton').addEventListener('click', () => {
+        CanvasManager.saveImage();
       });
       // 페이지 로드 시 초기화
       window.onload = function() {
