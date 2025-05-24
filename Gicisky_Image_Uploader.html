@@ -246,8 +246,10 @@
     <!-- 체크박스 옵션 -->
     <div class="options" style="display: none;">
         <label><input type="checkbox" id="secondColorCheckbox"> Second Color</label>
-        <label><input type="checkbox" id="rotationCheckbox"> Mirror</label>
+        <label><input type="checkbox" id="rotationCheckbox"> Rotation</label>
+        <label><input type="checkbox" id="mirrorCheckbox"> Mirror</label>
         <label><input type="checkbox" id="tftCheckbox"> TFT</label>
+        <label><input type="checkbox" id="compressionCheckbox"> Compression</label>
     </div>
 
     <div class="step-container">
@@ -386,6 +388,8 @@
             console.log("Display Type: " + rawType);
             document.getElementById('rotationCheckbox').checked = false;
             document.getElementById('tftCheckbox').checked = false;
+            document.getElementById('mirrorCheckbox').checked = false;
+            document.getElementById('compressionCheckbox').checked = false;
             document.getElementById('myImage').style.background = 'white';
             document.getElementById('secondColorCheckbox').checked = true;
             document.getElementById('redSlider').disabled = false;
@@ -420,6 +424,8 @@
                     document.getElementById('widthInput').value = "800";
                     document.getElementById('myImage').style.maxWidth = '530px';
                     document.getElementById('rotationCheckbox').checked = true;
+                    document.getElementById('mirrorCheckbox').checked = true;
+                    document.getElementById('compressionCheckbox').checked = true;
                     break;
             }
         },
@@ -504,6 +510,8 @@
             var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
             var rotationEnabled = document.getElementById('rotationCheckbox').checked;
             var tftEnabled = document.getElementById('tftCheckbox').checked;
+            var mirrorEnabled = document.getElementById('mirrorCheckbox').checked;
+            var compressionEnabled = document.getElementById('compressionCheckbox').checked;
             var canvas = document.getElementById('myCanvas');
             var ctx = canvas.getContext('2d');
             var width = canvas.width;
@@ -547,12 +555,21 @@
                     var g = pixels[curr + 1];
                     var b = pixels[curr + 2];
                     var luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-                    if (luminance > lumThreshold) {
-                        currentByte |= (1 << bitPosition);
+
+                    if (compressionEnabled) {
+                        if (luminance < lumThreshold) {
+                            currentByte |= (1 << bitPosition);
+                        }
+                    }
+                    else {
+                        if (luminance > lumThreshold) {
+                            currentByte |= (1 << bitPosition);
+                        }
                     }
                     if (r > redThreshold && g < redThreshold) {
-                        currentByteRed |= (1 << bitPosition);
+                            currentByteRed |= (1 << bitPosition);
                     }
+
                     bitPosition--;
                     if (bitPosition < 0) {
                         byteData.push(currentByte);
@@ -571,12 +588,52 @@
 
             var byteDataCompressed = [];
             var pixelDataTextarea = document.getElementById('pixelData');
-
-            for (var b = 0; b < byteData.length; b++) {
-                byteDataCompressed.push(byteData[b]);
-            }
-            if (secondColorEnabled) {
-                byteDataCompressed = [...byteDataCompressed, ...byteDataRed];
+            if (compressionEnabled) {
+                var currentPosi = 0;
+                var byte_per_line = height / 8;
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                for (var i = 0; i < width; i += 1) {
+                    byteDataCompressed.push(0x75);
+                    byteDataCompressed.push(byte_per_line + 7);
+                    byteDataCompressed.push(byte_per_line);
+                    byteDataCompressed.push(0x00);
+                    byteDataCompressed.push(0x00);
+                    byteDataCompressed.push(0x00);
+                    byteDataCompressed.push(0x00);
+                    for (var b = 0; b < byte_per_line; b++) {
+                        byteDataCompressed.push(byteData[currentPosi++]);
+                    }
+                }
+                currentPosi = 0;
+                if (secondColorEnabled) {
+                    for (var i = 0; i < width; i += 1) {
+                        byteDataCompressed.push(0x75);
+                        byteDataCompressed.push(byte_per_line + 7);
+                        byteDataCompressed.push(byte_per_line);
+                        byteDataCompressed.push(0x00);
+                        byteDataCompressed.push(0x00);
+                        byteDataCompressed.push(0x00);
+                        byteDataCompressed.push(0x00);
+                        for (var b = 0; b < byte_per_line; b++) {
+                            byteDataCompressed.push(byteDataRed[currentPosi++]);
+                        }
+                    }
+                }
+                byteDataCompressed[0] = byteDataCompressed.length & 0xff;
+                byteDataCompressed[1] = (byteDataCompressed.length >> 8) & 0xff;
+                byteDataCompressed[2] = (byteDataCompressed.length >> 16) & 0xff;
+                byteDataCompressed[3] = (byteDataCompressed.length >> 24) & 0xff;
+            } 
+            else {
+                for (var b = 0; b < byteData.length; b++) {
+                    byteDataCompressed.push(byteData[b]);
+                }
+                if (secondColorEnabled) {
+                    byteDataCompressed = [...byteDataCompressed, ...byteDataRed];
+                }
             }
             pixelDataTextarea.value = Utils.bufferToHex(byteDataCompressed);
         },
