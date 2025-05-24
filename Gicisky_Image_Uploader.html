@@ -412,6 +412,7 @@
                     document.getElementById('heightInput').value = "128";
                     document.getElementById('widthInput').value = "296";
                     document.getElementById('myImage').style.maxWidth = '396px';
+                    document.getElementById('mirrorCheckbox').checked = true;
                     break;
                 case 0x4B:
                     document.getElementById('heightInput').value = "300";
@@ -538,6 +539,28 @@
                 tempCtx.drawImage(originalCanvas, 0, 0, imageData.width, imageData.height, 0, 0, width, height);
 
                 // 5. 리사이즈된 이미지 데이터를 반환
+                imageData = tempCtx.getImageData(0, 0, width, height);
+            }
+
+            if (mirrorEnabled) {
+                var tempCanvas = document.createElement('canvas');
+                var tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+
+                // 1) 캔버스 y축 기준으로 이동
+                tempCtx.translate(0, height);
+                // 2) y축 스케일을 -1로 설정해서 상하 반전
+                tempCtx.scale(1, -1);
+
+                // 원본 이미지를 반전된 좌표계에 그리기
+                tempCtx.drawImage(
+                    originalCanvas,
+                    0, 0, imageData.width, imageData.height,  // 원본에서 가져올 영역
+                    0, 0, width, height                       // 대상 캔버스에 그릴 위치/크기
+                );
+
+                // 반전된 픽셀 데이터를 다시 가져옴
                 imageData = tempCtx.getImageData(0, 0, width, height);
             }
 
