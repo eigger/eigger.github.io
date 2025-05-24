@@ -216,10 +216,11 @@
       <label>1 단계 : 라벨 타입을 선택 하세요.</label>
       <div class="select-label">
         <select id="optionsSelect">
-          <option value="410B">2.1인치 (250x122) 검정 & 흰색 & 빨강</option>
-          <option value="0032">2.9인치 (296x128) 검정 & 흰색 & 빨강</option>
-          <option value="004B">4.2인치 (400x300) 검정 & 흰색 & 빨강</option>
-          <option value="40A0">2.1인치 (250x132) 검정</option>
+          <option value="0B">2.1인치 (250x122) 검정 & 흰색 & 빨강</option>
+          <option value="33">2.9인치 (296x128) 검정 & 흰색 & 빨강</option>
+          <option value="4B">4.2인치 (400x300) 검정 & 흰색 & 빨강</option>
+          <option value="2B">7.5인치 (800x480) 검정 & 흰색 & 빨강</option>
+          <option value="A0">2.1인치 (250x132) 검정</option>
         </select>
       </div>
     </div>
@@ -288,7 +289,7 @@
     </div>
     <div class="step-container">
       <div class="version">
-        Version : 250225
+        Version : 250524
         <a href="https://github.com/eigger/eigger.github.io" target="_blank">GitHub (eigger)</a>
       </div>
 
@@ -366,6 +367,7 @@
           this.offsetY = 0;
           this.canvas.width = width;
           this.canvas.height = height;
+          this.canvas.removeAttribute("style");
           if (this.canvas.width > this.container.clientWidth - 15)
           {
             this.canvas.style.width = `${this.container.clientWidth - 15}px`;            
@@ -380,111 +382,44 @@
             var select = document.getElementById("optionsSelect");
             var selectedValue = select.options[select.selectedIndex].value;
             var rawType = Number("0x" + selectedValue);
-            var screenResolution = (rawType >> 5) & 63;
-            var dispPtype = (rawType >> 3) & 3;
-            var availColors = ((rawType >> 1) & 3) + ((rawType >> 10) & 12);
-            var singleDoubleMirror = rawType & 1;
-            var canDoCompression = (rawType & 0x4000) ? 0 : 1;
 
-            console.log("Display Resolution: " + screenResolution);
-            console.log("Display Type: " + dispPtype);
-            console.log("Display Colors: " + availColors);
-            console.log("Display Mirror: " + singleDoubleMirror);
-            console.log("Display Compression: " + canDoCompression);
+            console.log("Display Type: " + rawType);
             document.getElementById('rotationCheckbox').checked = false;
             document.getElementById('tftCheckbox').checked = false;
             document.getElementById('myImage').style.background = 'white';
             document.getElementById('secondColorCheckbox').checked = true;
             document.getElementById('redSlider').disabled = false;
-            switch (screenResolution) {
-                case 0:
-                    document.getElementById('heightInput').value = "104";
-                    document.getElementById('widthInput').value = "212";
-                    document.getElementById('myImage').style.maxWidth = '312';
+            switch (rawType) {
+              case 0xA0:
+                    document.getElementById('heightInput').value = "132";
+                    document.getElementById('widthInput').value = "250";
+                    document.getElementById('myImage').style.maxWidth = '350px';
+                    document.getElementById('tftCheckbox').checked = true;
+                    document.getElementById('myImage').style.background = '#ccc';
+                    document.getElementById('secondColorCheckbox').checked = false;
+                    document.getElementById('redSlider').disabled = true;
                     break;
-                case 1:
+                case 0x0B:
+                    document.getElementById('heightInput').value = "128";
+                    document.getElementById('widthInput').value = "250";
+                    document.getElementById('myImage').style.maxWidth = '350px';
+                    break;
+                case 0x33:
                     document.getElementById('heightInput').value = "128";
                     document.getElementById('widthInput').value = "296";
                     document.getElementById('myImage').style.maxWidth = '396px';
                     break;
-                case 2:
+                case 0x4B:
                     document.getElementById('heightInput').value = "300";
                     document.getElementById('widthInput').value = "400";
                     document.getElementById('myImage').style.maxWidth = '450px';
                     document.getElementById('rotationCheckbox').checked = true;
                     break;
-                case 3:
-                    document.getElementById('heightInput').value = "384";
-                    document.getElementById('widthInput').value = "640";
-                    document.getElementById('myImage').style.maxWidth = '740px';
-                    break;
-                case 4:
-                    document.getElementById('heightInput').value = "640";
-                    document.getElementById('widthInput').value = "960";
-                    document.getElementById('myImage').style.maxWidth = '1100px';
-                    break;
-                case 5:
-                    document.getElementById('heightInput').value = "132";
-                    document.getElementById('widthInput').value = "250";
-                    document.getElementById('myImage').style.maxWidth = '350px';
-                    break;
-                case 6:
-                    document.getElementById('heightInput').value = "96";
-                    document.getElementById('widthInput').value = "196";
-                    document.getElementById('myImage').style.maxWidth = '296px';
-                    break;
-                case 7:
+                case 0x2B:
                     document.getElementById('heightInput').value = "480";
-                    document.getElementById('widthInput').value = "640";
-                    document.getElementById('myImage').style.maxWidth = '690px';
-                    break;
-                case 8:
-                    document.getElementById('heightInput').value = "128";
-                    document.getElementById('widthInput').value = "250";
-                    document.getElementById('myImage').style.maxWidth = '350px';
-                    break;
-                case 9:
-                    document.getElementById('heightInput').value = "800";
-                    document.getElementById('widthInput').value = "480";
+                    document.getElementById('widthInput').value = "800";
                     document.getElementById('myImage').style.maxWidth = '530px';
-                    break;
-                case 10:
-                    document.getElementById('heightInput').value = "480";
-                    document.getElementById('widthInput').value = "280";
-                    document.getElementById('myImage').style.maxWidth = '330px';
-                    break;
-            }
-
-            switch (dispPtype) {
-                case 0:// TFT
-                    document.getElementById('tftCheckbox').checked = true;
-                    document.getElementById('myImage').style.background = '#ccc';
-                    break;
-                case 1:// EPA
-                    break;
-                case 2:// EPA1
-                    break;
-                case 3:// EPA2
-                    break;
-            }
-            switch (availColors) {
-                case 0:// BW
-                    document.getElementById('secondColorCheckbox').checked = false;
-                    document.getElementById('redSlider').disabled = true;
-                    break;
-                case 1:// BWR
-                    break;
-                case 2:// BWY
-                    break;
-                case 3:// BWRY
-                    break;
-                case 4:// BWRGBYO
-                    break;
-            }
-            switch (singleDoubleMirror) {
-                case 0:// Single image
-                    break;
-                case 1:// 2 Images
+                    document.getElementById('rotationCheckbox').checked = true;
                     break;
             }
         },
