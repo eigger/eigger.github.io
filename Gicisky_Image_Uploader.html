@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap');
+
     :root {
       --bg-color: #f8f9fa;
       --text-color: #333;
@@ -18,6 +20,7 @@
       --shadow-color: rgba(0, 0, 0, 0.1);
       --status-bg: #f3f3f3;
     }
+
     [data-theme="dark"] {
       --bg-color: #121212;
       --text-color: #f8f9fa;
@@ -29,6 +32,7 @@
       --shadow-color: rgba(255, 255, 255, 0.1);
       --status-bg: #333;
     }
+
     body {
       font-family: 'Nanum Gothic', sans-serif;
       text-align: center;
@@ -37,25 +41,31 @@
       color: var(--text-color);
       transition: background-color 0.3s, color 0.3s;
     }
+
     .version {
       text-align: left;
       font-size: 12px;
     }
-    h1, h2 {
+
+    h1,
+    h2 {
       color: var(--primary-color);
       margin-bottom: 10px;
       font-size: 20px;
     }
+
     label {
       font-weight: bold;
       margin-right: 5px;
       color: var(--secondary-color);
       font-size: 14px;
     }
+
     label.info {
       font-size: 13px;
       margin: 10px;
     }
+
     input,
     select,
     button {
@@ -65,12 +75,15 @@
       border: 1px solid #ccc;
       font-size: 14px;
     }
-    input, select {
+
+    input,
+    select {
       min-width: 150px;
       text-align: center;
       color: var(--text-color);
       background-color: var(--bg-color);
     }
+
     button {
       max-width: 200px;
       background-color: var(--button-bg);
@@ -79,21 +92,26 @@
       transition: background-color 0.3s;
       border: none;
     }
+
     button:disabled {
       background-color: #ccc;
       cursor: not-allowed;
     }
+
     button:hover {
       background-color: var(--button-hover);
     }
+
     button:disabled:hover {
       background-color: #ccc;
       cursor: not-allowed;
     }
+
     #ble-support {
       color: red;
       font-weight: bold;
     }
+
     .container {
       max-width: 550px;
       margin: 0 auto;
@@ -102,6 +120,7 @@
       border-radius: 10px;
       box-shadow: 0px 0px 10px var(--shadow-color);
     }
+
     .step-container {
       text-align: left;
       max-width: 550px;
@@ -111,6 +130,7 @@
       border-radius: 10px;
       box-shadow: 0px 0px 10px var(--shadow-color);
     }
+
     .image-container {
       border: 0.5px solid rgb(231, 231, 231);
       max-width: 350px;
@@ -120,10 +140,12 @@
       border-radius: 15px;
       box-shadow: 0px 0px 10px var(--shadow-color);
     }
+
     .select-label {
       margin: 10px 0;
       text-align: center;
     }
+
     .send-image {
       margin: 10px 0;
       text-align: center;
@@ -134,17 +156,21 @@
       display: block;
       margin: 10px auto;
     }
+
     .file-upload {
       text-align: center;
     }
+
     #pixelData {
       display: none;
     }
+
     .log-view {
       margin: 10px 0;
       text-align: center;
       display: block;
     }
+
     #status {
       text-align: left;
       padding: 10px;
@@ -154,6 +180,7 @@
       font-size: 12px;
       margin-top: 10px;
     }
+
     #log {
       text-align: left;
       padding: 10px;
@@ -165,6 +192,7 @@
       height: 100px;
       overflow: auto;
     }
+
     .pixlr-button {
       display: inline-block;
       margin-top: 10px;
@@ -176,11 +204,13 @@
       font-size: 12px;
       cursor: pointer;
     }
+
     .theme-container {
       display: flex;
       /* justify-content: space-evenly; */
       align-items: center;
     }
+
     .theme-toggle {
       max-width: 50px;
       font-size: 24px;
@@ -188,18 +218,21 @@
       border: none;
       background: none;
     }
+
     .slider-container {
       margin: 0 auto;
       display: flex;
       justify-content: space-around;
       align-items: center;
     }
+
     .slider-container label {
       font-size: 14px;
       max-width: 150px;
     }
   </style>
 </head>
+
 <body data-theme="light">
   <div class="container">
     <!-- 테마 및 제목 영역 -->
@@ -220,6 +253,7 @@
           <option value="33">2.9인치 (296x128) 검정 & 흰색 & 빨강</option>
           <option value="4B">4.2인치 (400x300) 검정 & 흰색 & 빨강</option>
           <option value="2B">7.5인치 (800x480) 검정 & 흰색 & 빨강</option>
+          <option value="8B">10.2인치 (960x640) 검정 & 흰색 & 빨강</option>
           <option value="A0">2.1인치 (250x132) 검정</option>
         </select>
       </div>
@@ -237,19 +271,20 @@
 
     <!-- Width & Height 설정 -->
     <div style="display: none;">
-        <label for="widthInput">Width:</label>
-        <input type="text" id="widthInput" value="250" style="width: 50px;">
-        <label for="heightInput">Height:</label>
-        <input type="text" id="heightInput" value="128" style="width: 50px;">
+      <label for="widthInput">Width:</label>
+      <input type="text" id="widthInput" value="250" style="width: 50px;">
+      <label for="heightInput">Height:</label>
+      <input type="text" id="heightInput" value="128" style="width: 50px;">
     </div>
-  
+
     <!-- 체크박스 옵션 -->
     <div class="options" style="display: none;">
-        <label><input type="checkbox" id="secondColorCheckbox"> Second Color</label>
-        <label><input type="checkbox" id="rotationCheckbox"> Rotation</label>
-        <label><input type="checkbox" id="mirrorCheckbox"> Mirror</label>
-        <label><input type="checkbox" id="tftCheckbox"> TFT</label>
-        <label><input type="checkbox" id="compressionCheckbox"> Compression</label>
+      <label><input type="checkbox" id="secondColorCheckbox"> Second Color</label>
+      <label><input type="checkbox" id="rotationCheckbox"> Rotation</label>
+      <label><input type="checkbox" id="mirrorCheckbox"> Mirror</label>
+      <label><input type="checkbox" id="tftCheckbox"> TFT</label>
+      <label><input type="checkbox" id="compressionCheckbox"> Compression</label>
+      <label><input type="checkbox" id="invertLuminanceCheckbox"> Invert Luminance</label>
     </div>
 
     <div class="step-container">
@@ -291,7 +326,7 @@
     </div>
     <div class="step-container">
       <div class="version">
-        Version : 250524
+        Version : 260206
         <a href="https://github.com/eigger/eigger.github.io" target="_blank">GitHub (eigger)</a>
       </div>
 
@@ -301,7 +336,7 @@
 
   <!-- JavaScript: 기능별 모듈화 (슬라이더 오버레이 적용 및 pixelData 갱신) -->
   <script>
-    (function() {
+    (function () {
       /* ──────────── 유틸리티 함수 ──────────── */
       const Utils = {
         bufferToHex(buffer) {
@@ -370,65 +405,73 @@
           this.canvas.width = width;
           this.canvas.height = height;
           this.canvas.removeAttribute("style");
-          if (this.canvas.width > this.container.clientWidth - 15)
-          {
-            this.canvas.style.width = `${this.container.clientWidth - 15}px`;            
+          if (this.canvas.width > this.container.clientWidth - 15) {
+            this.canvas.style.width = `${this.container.clientWidth - 15}px`;
           }
 
           this.ctx.fillStyle = 'white';
-          if (tftEnabled) this.ctx.fillStyle = '#969696'; 
+          if (tftEnabled) this.ctx.fillStyle = '#969696';
           this.ctx.fillRect(0, 0, width, height);
         },
-        
-        decodeTypes() {
-            var select = document.getElementById("optionsSelect");
-            var selectedValue = select.options[select.selectedIndex].value;
-            var rawType = Number("0x" + selectedValue);
 
-            console.log("Display Type: " + rawType);
-            document.getElementById('rotationCheckbox').checked = false;
-            document.getElementById('tftCheckbox').checked = false;
-            document.getElementById('mirrorCheckbox').checked = false;
-            document.getElementById('compressionCheckbox').checked = false;
-            document.getElementById('myImage').style.background = 'white';
-            document.getElementById('secondColorCheckbox').checked = true;
-            document.getElementById('redSlider').disabled = false;
-            switch (rawType) {
-              case 0xA0:
-                    document.getElementById('heightInput').value = "132";
-                    document.getElementById('widthInput').value = "250";
-                    document.getElementById('myImage').style.maxWidth = '350px';
-                    document.getElementById('tftCheckbox').checked = true;
-                    document.getElementById('myImage').style.background = '#ccc';
-                    document.getElementById('secondColorCheckbox').checked = false;
-                    document.getElementById('redSlider').disabled = true;
-                    break;
-                case 0x0B:
-                    document.getElementById('heightInput').value = "128";
-                    document.getElementById('widthInput').value = "250";
-                    document.getElementById('myImage').style.maxWidth = '350px';
-                    break;
-                case 0x33:
-                    document.getElementById('heightInput').value = "128";
-                    document.getElementById('widthInput').value = "296";
-                    document.getElementById('myImage').style.maxWidth = '396px';
-                    document.getElementById('mirrorCheckbox').checked = true;
-                    break;
-                case 0x4B:
-                    document.getElementById('heightInput').value = "300";
-                    document.getElementById('widthInput').value = "400";
-                    document.getElementById('myImage').style.maxWidth = '450px';
-                    document.getElementById('rotationCheckbox').checked = true;
-                    break;
-                case 0x2B:
-                    document.getElementById('heightInput').value = "480";
-                    document.getElementById('widthInput').value = "800";
-                    document.getElementById('myImage').style.maxWidth = '530px';
-                    document.getElementById('rotationCheckbox').checked = true;
-                    document.getElementById('mirrorCheckbox').checked = true;
-                    document.getElementById('compressionCheckbox').checked = true;
-                    break;
-            }
+        decodeTypes() {
+          var select = document.getElementById("optionsSelect");
+          var selectedValue = select.options[select.selectedIndex].value;
+          var rawType = Number("0x" + selectedValue);
+
+          console.log("Display Type: " + rawType);
+          document.getElementById('rotationCheckbox').checked = false;
+          document.getElementById('tftCheckbox').checked = false;
+          document.getElementById('mirrorCheckbox').checked = false;
+          document.getElementById('compressionCheckbox').checked = false;
+          document.getElementById('invertLuminanceCheckbox').checked = false;
+          document.getElementById('myImage').style.background = 'white';
+          document.getElementById('secondColorCheckbox').checked = true;
+          document.getElementById('redSlider').disabled = false;
+          switch (rawType) {
+            case 0xA0:
+              document.getElementById('heightInput').value = "132";
+              document.getElementById('widthInput').value = "250";
+              document.getElementById('myImage').style.maxWidth = '350px';
+              document.getElementById('tftCheckbox').checked = true;
+              document.getElementById('myImage').style.background = '#ccc';
+              document.getElementById('secondColorCheckbox').checked = false;
+              document.getElementById('redSlider').disabled = true;
+              break;
+            case 0x0B:
+              document.getElementById('heightInput').value = "128";
+              document.getElementById('widthInput').value = "250";
+              document.getElementById('myImage').style.maxWidth = '350px';
+              break;
+            case 0x33:
+              document.getElementById('heightInput').value = "128";
+              document.getElementById('widthInput').value = "296";
+              document.getElementById('myImage').style.maxWidth = '396px';
+              document.getElementById('mirrorCheckbox').checked = true;
+              break;
+            case 0x4B:
+              document.getElementById('heightInput').value = "300";
+              document.getElementById('widthInput').value = "400";
+              document.getElementById('myImage').style.maxWidth = '450px';
+              document.getElementById('rotationCheckbox').checked = true;
+              break;
+            case 0x2B:
+              document.getElementById('heightInput').value = "480";
+              document.getElementById('widthInput').value = "800";
+              document.getElementById('myImage').style.maxWidth = '530px';
+              document.getElementById('rotationCheckbox').checked = true;
+              document.getElementById('mirrorCheckbox').checked = true;
+              document.getElementById('compressionCheckbox').checked = true;
+              document.getElementById('invertLuminanceCheckbox').checked = true;
+              break;
+            case 0x8B:
+              document.getElementById('heightInput').value = "640";
+              document.getElementById('widthInput').value = "960";
+              document.getElementById('myImage').style.maxWidth = '550px';
+              document.getElementById('rotationCheckbox').checked = true;
+              document.getElementById('compressionCheckbox').checked = true;
+              break;
+          }
         },
         /* displayOverlay() : 원본 이미지 데이터를 이용해
            - bwData: luminance 기준 (luminance > lumThreshold → 흰색, 아니면 검정)
@@ -458,18 +501,18 @@
             // 흑백 이진화 (luminance 기준)
             const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
             if (luminance > lumThreshold) {
-              bwData.data[i]     = 255;
+              bwData.data[i] = 255;
               bwData.data[i + 1] = 255;
               bwData.data[i + 2] = 255;
               bwData.data[i + 3] = 255;
               if (tftEnabled) {
-                bwData.data[i]     = 150;
+                bwData.data[i] = 150;
                 bwData.data[i + 1] = 150;
                 bwData.data[i + 2] = 150;
                 bwData.data[i + 3] = 255;
               }
             } else {
-              bwData.data[i]     = 0;
+              bwData.data[i] = 0;
               bwData.data[i + 1] = 0;
               bwData.data[i + 2] = 0;
               bwData.data[i + 3] = 255;
@@ -477,12 +520,12 @@
 
             // 빨강 오버레이: r > redThreshold && g < redThreshold이면 빨강, 아니면 투명
             if (secondColorEnabled && r > redThreshold && g < redThreshold) {
-              redOverlayData.data[i]     = 255;
+              redOverlayData.data[i] = 255;
               redOverlayData.data[i + 1] = 0;
               redOverlayData.data[i + 2] = 0;
               redOverlayData.data[i + 3] = 255;
             } else {
-              redOverlayData.data[i]     = 0;
+              redOverlayData.data[i] = 0;
               redOverlayData.data[i + 1] = 0;
               redOverlayData.data[i + 2] = 0;
               redOverlayData.data[i + 3] = 0;
@@ -490,12 +533,12 @@
 
             // 최종 합성: 빨강 오버레이가 적용된 픽셀은 빨강, 그렇지 않으면 bwData
             if (redOverlayData.data[i + 3] > 0) {
-              finalData.data[i]     = redOverlayData.data[i];
+              finalData.data[i] = redOverlayData.data[i];
               finalData.data[i + 1] = redOverlayData.data[i + 1];
               finalData.data[i + 2] = redOverlayData.data[i + 2];
               finalData.data[i + 3] = 255;
             } else {
-              finalData.data[i]     = bwData.data[i];
+              finalData.data[i] = bwData.data[i];
               finalData.data[i + 1] = bwData.data[i + 1];
               finalData.data[i + 2] = bwData.data[i + 2];
               finalData.data[i + 3] = 255;
@@ -506,159 +549,160 @@
           this.ctx.putImageData(finalData, 0, 0);
           this.getPixelData();
         },
-        
+
         getPixelData() {
-            var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
-            var rotationEnabled = document.getElementById('rotationCheckbox').checked;
-            var tftEnabled = document.getElementById('tftCheckbox').checked;
-            var mirrorEnabled = document.getElementById('mirrorCheckbox').checked;
-            var compressionEnabled = document.getElementById('compressionCheckbox').checked;
-            var canvas = document.getElementById('myCanvas');
-            var ctx = canvas.getContext('2d');
-            var width = canvas.width;
-            var height = canvas.height;
-            var imageData = ctx.getImageData(0, 0, width, height);
-            // 슬라이더 값 읽기
-            const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
-            const redThreshold = parseInt(document.getElementById('redSlider').value);
-            let originalCanvas = document.createElement("canvas");
-            let originalCtx = originalCanvas.getContext("2d");
-            originalCanvas.width = canvas.width;
-            originalCanvas.height = canvas.height;
-            originalCtx.putImageData(imageData, 0, 0);
+          var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
+          var rotationEnabled = document.getElementById('rotationCheckbox').checked;
+          var tftEnabled = document.getElementById('tftCheckbox').checked;
+          var mirrorEnabled = document.getElementById('mirrorCheckbox').checked;
+          var compressionEnabled = document.getElementById('compressionCheckbox').checked;
+          var invertLuminanceEnabled = document.getElementById('invertLuminanceCheckbox').checked;
+          var canvas = document.getElementById('myCanvas');
+          var ctx = canvas.getContext('2d');
+          var width = canvas.width;
+          var height = canvas.height;
+          var imageData = ctx.getImageData(0, 0, width, height);
+          // 슬라이더 값 읽기
+          const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
+          const redThreshold = parseInt(document.getElementById('redSlider').value);
+          let originalCanvas = document.createElement("canvas");
+          let originalCtx = originalCanvas.getContext("2d");
+          originalCanvas.width = canvas.width;
+          originalCanvas.height = canvas.height;
+          originalCtx.putImageData(imageData, 0, 0);
 
-            if (tftEnabled) {
-                var tempCanvas = document.createElement('canvas');
-                var tempCtx = tempCanvas.getContext('2d');
-                width = canvas.width / 2;
-                height = canvas.height * 2;
-                tempCanvas.width = width;
-                tempCanvas.height = height;
+          if (tftEnabled) {
+            var tempCanvas = document.createElement('canvas');
+            var tempCtx = tempCanvas.getContext('2d');
+            width = canvas.width / 2;
+            height = canvas.height * 2;
+            tempCanvas.width = width;
+            tempCanvas.height = height;
 
-                // 4. 원본 캔버스를 새로운 크기로 그리기 (리사이징)
-                tempCtx.drawImage(originalCanvas, 0, 0, imageData.width, imageData.height, 0, 0, width, height);
+            // 4. 원본 캔버스를 새로운 크기로 그리기 (리사이징)
+            tempCtx.drawImage(originalCanvas, 0, 0, imageData.width, imageData.height, 0, 0, width, height);
 
-                // 5. 리사이즈된 이미지 데이터를 반환
-                imageData = tempCtx.getImageData(0, 0, width, height);
-            }
+            // 5. 리사이즈된 이미지 데이터를 반환
+            imageData = tempCtx.getImageData(0, 0, width, height);
+          }
 
-            if (mirrorEnabled) {
-                var tempCanvas = document.createElement('canvas');
-                var tempCtx = tempCanvas.getContext('2d');
-                tempCanvas.width = width;
-                tempCanvas.height = height;
+          if (mirrorEnabled) {
+            var tempCanvas = document.createElement('canvas');
+            var tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
 
-                // 1) 캔버스 y축 기준으로 이동
-                tempCtx.translate(0, height);
-                // 2) y축 스케일을 -1로 설정해서 상하 반전
-                tempCtx.scale(1, -1);
+            // 1) 캔버스 y축 기준으로 이동
+            tempCtx.translate(0, height);
+            // 2) y축 스케일을 -1로 설정해서 상하 반전
+            tempCtx.scale(1, -1);
 
-                // 원본 이미지를 반전된 좌표계에 그리기
-                tempCtx.drawImage(
-                    originalCanvas,
-                    0, 0, imageData.width, imageData.height,  // 원본에서 가져올 영역
-                    0, 0, width, height                       // 대상 캔버스에 그릴 위치/크기
-                );
+            // 원본 이미지를 반전된 좌표계에 그리기
+            tempCtx.drawImage(
+              originalCanvas,
+              0, 0, imageData.width, imageData.height,  // 원본에서 가져올 영역
+              0, 0, width, height                       // 대상 캔버스에 그릴 위치/크기
+            );
 
-                // 반전된 픽셀 데이터를 다시 가져옴
-                imageData = tempCtx.getImageData(0, 0, width, height);
-            }
+            // 반전된 픽셀 데이터를 다시 가져옴
+            imageData = tempCtx.getImageData(0, 0, width, height);
+          }
 
-            var pixels = imageData.data;
-            var byteData = [];
-            var byteDataRed = [];
-            var currentByte = 0;
-            var currentByteRed = 0;
-            var bitPosition = 7;
-            for (var x = 0; x < width; x++) {
-                for (var y = 0; y < height; y++) {
-                    var curr = (Math.round(y * width) + x) * 4;
-                    if (rotationEnabled) curr = ((x * height) + y) * 4;
-                    var r = pixels[curr];
-                    var g = pixels[curr + 1];
-                    var b = pixels[curr + 2];
-                    var luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+          var pixels = imageData.data;
+          var byteData = [];
+          var byteDataRed = [];
+          var currentByte = 0;
+          var currentByteRed = 0;
+          var bitPosition = 7;
+          for (var x = 0; x < width; x++) {
+            for (var y = 0; y < height; y++) {
+              var curr = (Math.round(y * width) + x) * 4;
+              if (rotationEnabled) curr = ((x * height) + y) * 4;
+              var r = pixels[curr];
+              var g = pixels[curr + 1];
+              var b = pixels[curr + 2];
+              var luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-                    if (compressionEnabled) {
-                        if (luminance < lumThreshold) {
-                            currentByte |= (1 << bitPosition);
-                        }
-                    }
-                    else {
-                        if (luminance > lumThreshold) {
-                            currentByte |= (1 << bitPosition);
-                        }
-                    }
-                    if (r > redThreshold && g < redThreshold) {
-                            currentByteRed |= (1 << bitPosition);
-                    }
-
-                    bitPosition--;
-                    if (bitPosition < 0) {
-                        byteData.push(currentByte);
-                        byteDataRed.push(currentByteRed);
-                        currentByte = 0;
-                        currentByteRed = 0;
-                        bitPosition = 7;
-                    }
+              if (invertLuminanceEnabled) {
+                if (luminance < lumThreshold) {
+                  currentByte |= (1 << bitPosition);
                 }
-            }
+              }
+              else {
+                if (luminance > lumThreshold) {
+                  currentByte |= (1 << bitPosition);
+                }
+              }
+              if (r > redThreshold && g < redThreshold) {
+                currentByteRed |= (1 << bitPosition);
+              }
 
-            if (bitPosition !== 7) {
+              bitPosition--;
+              if (bitPosition < 0) {
                 byteData.push(currentByte);
                 byteDataRed.push(currentByteRed);
+                currentByte = 0;
+                currentByteRed = 0;
+                bitPosition = 7;
+              }
             }
+          }
 
-            var byteDataCompressed = [];
-            var pixelDataTextarea = document.getElementById('pixelData');
-            if (compressionEnabled) {
-                var currentPosi = 0;
-                var byte_per_line = height / 8;
-                byteDataCompressed.push(0x00);
-                byteDataCompressed.push(0x00);
-                byteDataCompressed.push(0x00);
-                byteDataCompressed.push(0x00);
-                for (var i = 0; i < width; i += 1) {
-                    byteDataCompressed.push(0x75);
-                    byteDataCompressed.push(byte_per_line + 7);
-                    byteDataCompressed.push(byte_per_line);
-                    byteDataCompressed.push(0x00);
-                    byteDataCompressed.push(0x00);
-                    byteDataCompressed.push(0x00);
-                    byteDataCompressed.push(0x00);
-                    for (var b = 0; b < byte_per_line; b++) {
-                        byteDataCompressed.push(byteData[currentPosi++]);
-                    }
-                }
-                currentPosi = 0;
-                if (secondColorEnabled) {
-                    for (var i = 0; i < width; i += 1) {
-                        byteDataCompressed.push(0x75);
-                        byteDataCompressed.push(byte_per_line + 7);
-                        byteDataCompressed.push(byte_per_line);
-                        byteDataCompressed.push(0x00);
-                        byteDataCompressed.push(0x00);
-                        byteDataCompressed.push(0x00);
-                        byteDataCompressed.push(0x00);
-                        for (var b = 0; b < byte_per_line; b++) {
-                            byteDataCompressed.push(byteDataRed[currentPosi++]);
-                        }
-                    }
-                }
-                byteDataCompressed[0] = byteDataCompressed.length & 0xff;
-                byteDataCompressed[1] = (byteDataCompressed.length >> 8) & 0xff;
-                byteDataCompressed[2] = (byteDataCompressed.length >> 16) & 0xff;
-                byteDataCompressed[3] = (byteDataCompressed.length >> 24) & 0xff;
-            } 
-            else {
-                for (var b = 0; b < byteData.length; b++) {
-                    byteDataCompressed.push(byteData[b]);
-                }
-                if (secondColorEnabled) {
-                    byteDataCompressed = [...byteDataCompressed, ...byteDataRed];
-                }
+          if (bitPosition !== 7) {
+            byteData.push(currentByte);
+            byteDataRed.push(currentByteRed);
+          }
+
+          var byteDataCompressed = [];
+          var pixelDataTextarea = document.getElementById('pixelData');
+          if (compressionEnabled) {
+            var currentPosi = 0;
+            var byte_per_line = height / 8;
+            byteDataCompressed.push(0x00);
+            byteDataCompressed.push(0x00);
+            byteDataCompressed.push(0x00);
+            byteDataCompressed.push(0x00);
+            for (var i = 0; i < width; i += 1) {
+              byteDataCompressed.push(0x75);
+              byteDataCompressed.push(byte_per_line + 7);
+              byteDataCompressed.push(byte_per_line);
+              byteDataCompressed.push(0x00);
+              byteDataCompressed.push(0x00);
+              byteDataCompressed.push(0x00);
+              byteDataCompressed.push(0x00);
+              for (var b = 0; b < byte_per_line; b++) {
+                byteDataCompressed.push(byteData[currentPosi++]);
+              }
             }
-            pixelDataTextarea.value = Utils.bufferToHex(byteDataCompressed);
+            currentPosi = 0;
+            if (secondColorEnabled) {
+              for (var i = 0; i < width; i += 1) {
+                byteDataCompressed.push(0x75);
+                byteDataCompressed.push(byte_per_line + 7);
+                byteDataCompressed.push(byte_per_line);
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                byteDataCompressed.push(0x00);
+                for (var b = 0; b < byte_per_line; b++) {
+                  byteDataCompressed.push(byteDataRed[currentPosi++]);
+                }
+              }
+            }
+            byteDataCompressed[0] = byteDataCompressed.length & 0xff;
+            byteDataCompressed[1] = (byteDataCompressed.length >> 8) & 0xff;
+            byteDataCompressed[2] = (byteDataCompressed.length >> 16) & 0xff;
+            byteDataCompressed[3] = (byteDataCompressed.length >> 24) & 0xff;
+          }
+          else {
+            for (var b = 0; b < byteData.length; b++) {
+              byteDataCompressed.push(byteData[b]);
+            }
+            if (secondColorEnabled) {
+              byteDataCompressed = [...byteDataCompressed, ...byteDataRed];
+            }
+          }
+          pixelDataTextarea.value = Utils.bufferToHex(byteDataCompressed);
         },
         /* 이미지 업로드 시 원본 이미지를 캔버스에 그리고 저장 */
         drawImage(img) {
@@ -799,7 +843,7 @@
                 if (this.gattServer && this.gattServer.connected) {
                   if (this.bleDevice && this.bleDevice.gatt.connected)
                     this.bleDevice.gatt.disconnect();
-                    this.disconnect();
+                  this.disconnect();
                 }
               } else if (dataHex.substring(2, 4) !== "00") {
                 addLog("업로드 중 오류 발생, 전송 중단!");
@@ -906,8 +950,8 @@
       function addLog(logText) {
         const now = new Date();
         const time = ("0" + now.getHours()).slice(-2) + ":" +
-                     ("0" + now.getMinutes()).slice(-2) + ":" +
-                     ("0" + now.getSeconds()).slice(-2) + " : ";
+          ("0" + now.getMinutes()).slice(-2) + ":" +
+          ("0" + now.getSeconds()).slice(-2) + " : ";
         document.getElementById("log").innerHTML += time + logText + '<br>';
         console.log(time + logText);
         while ((document.getElementById("log").innerHTML.match(/<br>/g) || []).length > 100) {
@@ -929,13 +973,13 @@
       document.getElementById('optionsSelect').addEventListener('change', () => {
         LabelManager.updateParameters();
       });
-      document.getElementById('imageUpload').addEventListener('change', function() {
+      document.getElementById('imageUpload').addEventListener('change', function () {
         const file = this.files[0];
         if (file) {
           const reader = new FileReader();
-          reader.onload = function(e) {
+          reader.onload = function (e) {
             const img = new Image();
-            img.onload = function() {
+            img.onload = function () {
               CanvasManager.drawImage(img);
             };
             img.src = e.target.result;
@@ -944,17 +988,15 @@
         }
       });
       // 슬라이더 이동 시 실시간 결과 갱신
-      document.getElementById('luminanceSlider').addEventListener('input', function() {
+      document.getElementById('luminanceSlider').addEventListener('input', function () {
         document.getElementById('lumVal').textContent = this.value;
         CanvasManager.displayOverlay();
       });
-      document.getElementById('redSlider').addEventListener('input', function() {
+      document.getElementById('redSlider').addEventListener('input', function () {
         document.getElementById('redVal').textContent = this.value;
         CanvasManager.displayOverlay();
       });
-      <!-- document.getElementById('pixlrButton').addEventListener('click', function() { -->
-        <!-- window.open('https://pixlr.com/kr/editor/', '_blank'); -->
-      <!-- }); -->
+
       document.getElementById('uploadButton').addEventListener('click', () => {
         BLEManager.initiateConnection();
       });
@@ -962,13 +1004,13 @@
         CanvasManager.saveImage();
       });
       // 페이지 로드 시 초기화
-      window.onload = function() {
+      window.onload = function () {
         LabelManager.updateParameters();
         BLEManager.checkSupport();
       };
 
       // ────────── 캔버스 드래그, 커서 변경 및 확대/축소 기능 추가 ──────────
-      (function() {
+      (function () {
         const canvas = CanvasManager.canvas;
         let isDragging = false;
         let startX, startY;
@@ -1008,7 +1050,7 @@
           isDragging = false;
           canvas.style.cursor = "grab";
         });
-        
+
         // 마우스 휠 이벤트: 확대/축소
         canvas.addEventListener('wheel', (e) => {
           e.preventDefault();
@@ -1040,4 +1082,5 @@
     })();
   </script>
 </body>
+
 </html>
