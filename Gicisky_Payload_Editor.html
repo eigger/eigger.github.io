@@ -313,12 +313,13 @@
       font-weight: 700
     }
 
-    /* YAML output */
+    /* YAML output — 고정 높이로 처음부터 스크롤 가능, 아이템 추가 시 레이아웃 밀림 방지 */
     .yaml-wrap {
       background: var(--surface);
       border-top: 1px solid var(--border);
       flex-shrink: 0;
-      max-height: 35vh;
+      height: 35vh;
+      min-height: 180px;
       display: flex;
       flex-direction: column
     }
@@ -339,6 +340,7 @@
 
     #yaml-output {
       flex: 1;
+      min-height: 0;
       overflow: auto;
       padding: 10px 16px;
       font-family: 'Fira Code', 'Cascadia Code', monospace;
@@ -401,11 +403,14 @@
     <div class="separator"></div>
     <label>Device</label>
     <select id="deviceSelect">
-      <option value="250,132">TFT 2.1" (250×132)</option>
-      <option value="250,128">EPD 2.1" (250×128)</option>
-      <option value="296,128" selected>EPD 2.9" (296×128)</option>
-      <option value="400,300">EPD 4.2" (400×300)</option>
-      <option value="800,480">EPD 7.5" (800×480)</option>
+      <option value="250,132">TFT 2.1" BW (250×132)</option>
+      <option value="250,128">EPD 2.1" BWR (250×128)</option>
+      <option value="296,128" selected>EPD 2.9" BWR (296×128)</option>
+      <option value="296,128">EPD 2.9" BWRY (296×128)</option>
+      <option value="400,300">EPD 4.2" BWR (400×300)</option>
+      <option value="400,300">EPD 4.2" BWRY (400×300)</option>
+      <option value="800,480">EPD 7.5" BWR (800×480)</option>
+      <option value="960,640">EPD 10.2" BWR (960×640)</option>
     </select>
     <label>Background</label>
     <select id="bgSelect">
@@ -620,9 +625,40 @@
       return { ox, oy };
     }
 
+    // === EFFECTIVE PROPS (PIL pos_y flow) ===
+    // Python imagegen uses pos_y to stack elements when y (or y_start) is not set. Simulate that for preview.
+    function computeEffectiveProps() {
+      let pos_y = 0;
+      elements.forEach(el => {
+        const p = el.props;
+        const eff = { ...p };
+        switch (el.type) {
+          case 'line':
+            if (p.y_start === undefined && p.y_end === undefined) {
+              eff.y_start = pos_y + (p.y_padding ?? 0);
+              eff.y_end = eff.y_start;
+            }
+            pos_y = eff.y_start ?? eff.y_end ?? pos_y;
+            break;
+          case 'text':
+            if (p.y === undefined) eff.y = pos_y + (p.y_padding ?? 10);
+            pos_y = (eff.y ?? pos_y) + (p.size || 20) * 1.3;
+            break;
+          case 'multiline':
+            if (p.start_y === undefined) eff.start_y = pos_y + (p.y_padding ?? 10);
+            const lines = String(p.value || '').split(p.delimiter || ';');
+            pos_y = (eff.start_y ?? pos_y) + lines.length * (p.offset_y || 25);
+            break;
+          default:
+            break;
+        }
+        el._effectiveProps = eff;
+      });
+    }
+
     // === BOUNDING BOX ===
     function getBBox(el) {
-      const p = el.props;
+      const p = el._effectiveProps || el.props;
       switch (el.type) {
         case 'text': {
           const w = Math.max(p.size * String(p.value).length * 0.6, 40), h = p.size * 1.3;
@@ -639,7 +675,7 @@
           return { x: p.x + ox, y: p.y + oy, w: p.size, h: p.size };
         }
         case 'dlimg': return { x: p.x, y: p.y, w: p.xsize, h: p.ysize };
-        case 'qrcode': { const s = (p.boxsize || 2) * (25 + 2 * (p.border || 1)); return { x: p.x, y: p.y, w: s, h: s }; }
+        case 'qrcode': { const s = (p.boxsize || 2) * (21 + 2 * (p.border || 1)); return { x: p.x, y: p.y, w: s, h: s }; }
         case 'barcode': return { x: p.x, y: p.y, w: 140, h: 60 };
         case 'progress_bar': return { x: p.x_start, y: p.y_start, w: p.x_end - p.x_start, h: p.y_end - p.y_start };
         case 'diagram': return { x: p.x, y: p.y, w: p.width || canvasW, h: p.height };
@@ -655,6 +691,7 @@
     }
 
     function drawCanvas() {
+      computeEffectiveProps();
       const wrap = document.getElementById('canvasWrap');
       canvas.width = wrap.clientWidth;
       canvas.height = wrap.clientHeight;
@@ -717,7 +754,7 @@
     }
 
     function drawElement(el) {
-      const p = el.props;
+      const p = el._effectiveProps || el.props;
       ctx.lineWidth = 1;
       switch (el.type) {
         case 'text': {
@@ -825,7 +862,7 @@
           break;
         }
         case 'qrcode': {
-          const bs = p.boxsize || 2, bd = p.border || 1, s = bs * (25 + 2 * bd);
+          const bs = p.boxsize || 2, bd = p.border || 1, s = bs * (21 + 2 * bd);
           ctx.fillStyle = resolveColor(p.bgcolor); ctx.fillRect(p.x, p.y, s, s);
           ctx.fillStyle = resolveColor(p.color);
           // Simple QR pattern preview
@@ -858,10 +895,11 @@
           break;
         }
         case 'diagram': {
+          const dw = p.width ?? canvasW, dm = p.margin ?? 20;
           ctx.strokeStyle = '#333'; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(p.x + p.margin, p.y); ctx.lineTo(p.x + p.margin, p.y + p.height - p.margin); ctx.lineTo(p.x + p.width, p.y + p.height - p.margin); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(p.x + dm, p.y); ctx.lineTo(p.x + dm, p.y + p.height - dm); ctx.lineTo(p.x + dw, p.y + p.height - dm); ctx.stroke();
           ctx.fillStyle = '#666'; ctx.font = '9px sans-serif'; ctx.textBaseline = 'top'; ctx.textAlign = 'center';
-          ctx.fillText('📊 diagram', p.x + p.width / 2, p.y + p.height / 2 - 6); ctx.textAlign = 'left';
+          ctx.fillText('📊 diagram', p.x + dw / 2, p.y + p.height / 2 - 6); ctx.textAlign = 'left';
           break;
         }
         case 'plot': {
@@ -962,14 +1000,14 @@
       }
       // QR code: compute bbox, resize from any corner
       else if (t === 'qrcode') {
-        const oldS = (sp.boxsize || 2) * (25 + 2 * (sp.border || 1));
+        const oldS = (sp.boxsize || 2) * (21 + 2 * (sp.border || 1));
         let x1 = sp.x, y1 = sp.y, x2 = sp.x + oldS, y2 = sp.y + oldS;
         if (handle.includes('l')) x1 += dx;
         if (handle.includes('r')) x2 += dx;
         if (handle.includes('t')) y1 += dy;
         if (handle.includes('b')) y2 += dy;
         const newS = Math.max(10, Math.max(x2 - x1, y2 - y1));
-        const units = 25 + 2 * (sp.border || 1);
+        const units = 21 + 2 * (sp.border || 1);
         el.props.boxsize = Math.max(1, Math.round(newS / units));
         el.props.x = Math.round(x1);
         el.props.y = Math.round(y1);
