@@ -479,6 +479,8 @@
 
   <script>
     // === STATE ===
+    const EDITOR_VERSION = '2026.02.12';
+    const DPI_SCALE = 300 / 25.4; // 11.81 px/mm
     let elements = [];
     let selectedId = null;
     let nextId = 1;
@@ -493,6 +495,59 @@
 
     const COLORS = { white: '#ffffff', black: '#000000', red: '#ff0000', yellow: '#ffff00' };
     const resolveColor = c => COLORS[c] || c || '#000000';
+
+    // === QR CODE HELPERS ===
+    // Approx capacities for Byte mode, ECC High (30%)
+    // Versions 1-40
+    const QR_CAPACITIES = [
+      0, 7, 14, 24, 34, 44, 58, 64, 84, 98, 119, 137, 155, 177, 194, 220, 250, 280, 310, 338, 382, 403, 439, 461, 511, 535, 593, 625, 658, 698, 742, 790, 842, 898, 958, 983, 1051, 1093, 1139, 1219, 1273
+    ];
+    function getQRModuleCount(data, ecc) {
+      // Simple estimation: assume Byte mode, ECC High (30%)
+      const len = String(data).length; // reliable enough for typical ASCII urls
+      let ver = 40;
+      for (let v = 1; v < QR_CAPACITIES.length; v++) {
+        if (len <= QR_CAPACITIES[v]) { ver = v; break; }
+      }
+      return 21 + (ver - 1) * 4;
+    }
+
+    // Match python-barcode BaseWriter.calculate_size() and ImageWriter dpi=300 (mm2px)
+    const PT_TO_MM = 0.352777778;
+    function getCode128Modules(data) {
+      const s = String(data);
+      const len = s.length;
+      const allDigits = /^\d+$/.test(s);
+      if (allDigits && len >= 2) {
+        // Set C: 2 digits per symbol (11 modules each). Start(11) + data + Check(11) + Stop(13)
+        const dataSymbols = Math.ceil(len / 2);
+        return 11 + 11 * dataSymbols + 11 + 13;
+      }
+      // Set A/B: 1 char per 11 modules
+      return 11 * len + 35;
+    }
+    function getBarcodeSize(p) {
+      const len = String(p.data).length;
+      const code = (p.code || 'code128').toLowerCase();
+      const mods = code === 'code128' ? getCode128Modules(p.data) : (11 * len + 35);
+      const mw = p.module_width ?? 0.2;
+      const qz = p.quiet_zone ?? 6.5;
+      const width_mm = 2 * qz + mods * mw;
+
+      const mh = p.module_height ?? 7;
+      const td = p.text_distance ?? 5;
+      const fs = p.font_size ?? 5;
+      const margin_top = 1;
+      const margin_bottom = 1;
+      // calculate_size: height = margin_bottom + margin_top + module_height*lines + (font_size/2 pt->mm * n_lines + text_distance)
+      const text_part_mm = (p.write_text !== false) ? (PT_TO_MM * fs / 2 + td) : 0;
+      const height_mm = margin_top + margin_bottom + mh + text_part_mm;
+
+      return {
+        w: Math.ceil(width_mm * DPI_SCALE),
+        h: Math.round(height_mm * DPI_SCALE)
+      };
+    }
 
     // === MDI ICON CACHE ===
     const mdiPathCache = {};
@@ -677,8 +732,8 @@
           return { x: p.x + ox, y: p.y + oy, w: p.size, h: p.size };
         }
         case 'dlimg': return { x: p.x, y: p.y, w: p.xsize, h: p.ysize };
-        case 'qrcode': { const s = (p.boxsize || 2) * (21 + 2 * (p.border || 1)); return { x: p.x, y: p.y, w: s, h: s }; }
-        case 'barcode': return { x: p.x, y: p.y, w: 140, h: 60 };
+        case 'qrcode': { const bs = (p.boxsize || 2); const bd = (p.border === undefined ? 1 : p.border); const mods = getQRModuleCount(p.data); const s = bs * (mods + 2 * bd); return { x: p.x, y: p.y, w: s, h: s }; }
+        case 'barcode': { const sz = getBarcodeSize(p); return { x: p.x, y: p.y, w: sz.w, h: sz.h }; }
         case 'progress_bar': return { x: p.x_start, y: p.y_start, w: p.x_end - p.x_start, h: p.y_end - p.y_start };
         case 'diagram': return { x: p.x, y: p.y, w: p.width || canvasW, h: p.height };
         case 'plot': return { x: p.x_start || 0, y: p.y_start || 0, w: (p.x_end || canvasW) - (p.x_start || 0), h: (p.y_end || canvasH) - (p.y_start || 0) };
@@ -864,23 +919,65 @@
           break;
         }
         case 'qrcode': {
-          const bs = p.boxsize || 2, bd = p.border || 1, s = bs * (21 + 2 * bd);
+          const bs = p.boxsize || 2;
+          const bd = p.border === undefined ? 4 : p.border;
+          const mods = getQRModuleCount(p.data);
+          const s = bs * (mods + 2 * bd);
           ctx.fillStyle = resolveColor(p.bgcolor); ctx.fillRect(p.x, p.y, s, s);
           ctx.fillStyle = resolveColor(p.color);
           // Simple QR pattern preview
-          for (let i = 0; i < 7; i++) for (let j = 0; j < 7; j++) {
-            if (i < 2 || i > 4 || j < 2 || j > 4 || (i >= 2 && i <= 4 && j >= 2 && j <= 4))
-              ctx.fillRect(p.x + bd * bs + i * bs, p.y + bd * bs + j * bs, bs, bs);
-          }
-          ctx.font = '8px sans-serif'; ctx.textBaseline = 'bottom'; ctx.fillText('QR', p.x + 2, p.y + s - 2);
+          // Draw patterns at corners based on modules size
+          // Top-left
+          ctx.fillRect(p.x + bd * bs, p.y + bd * bs, 7 * bs, 7 * bs);
+          ctx.clearRect(p.x + (bd + 1) * bs, p.y + (bd + 1) * bs, 5 * bs, 5 * bs);
+          ctx.fillRect(p.x + (bd + 2) * bs, p.y + (bd + 2) * bs, 3 * bs, 3 * bs);
+          // Top-right
+          ctx.fillRect(p.x + (bd + mods - 7) * bs, p.y + bd * bs, 7 * bs, 7 * bs);
+          ctx.clearRect(p.x + (bd + mods - 6) * bs, p.y + (bd + 1) * bs, 5 * bs, 5 * bs);
+          ctx.fillRect(p.x + (bd + mods - 5) * bs, p.y + (bd + 2) * bs, 3 * bs, 3 * bs);
+          // Bottom-left
+          ctx.fillRect(p.x + bd * bs, p.y + (bd + mods - 7) * bs, 7 * bs, 7 * bs);
+          ctx.clearRect(p.x + (bd + 1) * bs, p.y + (bd + mods - 6) * bs, 5 * bs, 5 * bs);
+          ctx.fillRect(p.x + (bd + 2) * bs, p.y + (bd + mods - 5) * bs, 3 * bs, 3 * bs);
+
+          ctx.font = '8px sans-serif'; ctx.textBaseline = 'bottom'; ctx.fillText('QR V' + ((mods - 21) / 4 + 1), p.x + 2, p.y + s - 2);
           break;
         }
         case 'barcode': {
-          ctx.fillStyle = resolveColor(p.bgcolor); ctx.fillRect(p.x, p.y, 140, 60);
-          ctx.fillStyle = resolveColor(p.color);
-          for (let i = 0; i < 35; i++) { if (Math.random() > 0.4) ctx.fillRect(p.x + 5 + i * 3.5, p.y + 5, 2, 40); }
-          ctx.font = '8px sans-serif'; ctx.textBaseline = 'top'; ctx.textAlign = 'center';
-          ctx.fillText(String(p.data), p.x + 70, p.y + 47); ctx.textAlign = 'left';
+          const sz = getBarcodeSize(p);
+          ctx.fillStyle = resolveColor(p.bgcolor ?? 'white'); ctx.fillRect(p.x, p.y, sz.w, sz.h);
+          ctx.fillStyle = resolveColor(p.color ?? 'black');
+          // Match python-barcode ImageWriter: margin_top=1mm, then bars, then text_distance, then text (pt2mm(font_size) for layout)
+          const qzPx = (p.quiet_zone ?? 6.5) * DPI_SCALE;
+          const barW = sz.w - 2 * qzPx;
+          const barH = (p.module_height ?? 7) * DPI_SCALE;
+          const marginTopPx = 1 * DPI_SCALE;
+
+          if (barW > 0) {
+            const numBars = 40;
+            const step = barW / numBars;
+            for (let i = 0; i < numBars; i++) {
+              if ((i * 7 + 3) % 5 < 3) ctx.fillRect(p.x + qzPx + i * step, p.y + marginTopPx, step * 0.6, barH);
+            }
+          }
+
+          if (p.write_text !== false) {
+            const fs = p.font_size ?? 5;
+            const fsPx = Math.max(1, Math.round(PT_TO_MM * fs * DPI_SCALE));
+            const rawTextDistPx = (p.text_distance ?? 5) * DPI_SCALE;
+            const barBottomY = p.y + marginTopPx + barH;
+            ctx.font = `${fsPx}px sans-serif`;
+            ctx.textAlign = 'center';
+            if (rawTextDistPx <= 0) {
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(String(p.data), p.x + sz.w / 2, barBottomY);
+            } else {
+              const textCenterY = barBottomY + rawTextDistPx * 0.5;
+              ctx.textBaseline = 'middle';
+              ctx.fillText(String(p.data), p.x + sz.w / 2, textCenterY);
+            }
+            ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+          }
           break;
         }
         case 'progress_bar': {
@@ -1002,14 +1099,17 @@
       }
       // QR code: compute bbox, resize from any corner
       else if (t === 'qrcode') {
-        const oldS = (sp.boxsize || 2) * (21 + 2 * (sp.border || 1));
+        const mods = getQRModuleCount(sp.data);
+        const bs = sp.boxsize || 2;
+        const bd = sp.border === undefined ? 1 : sp.border;
+        const oldS = bs * (mods + 2 * bd);
         let x1 = sp.x, y1 = sp.y, x2 = sp.x + oldS, y2 = sp.y + oldS;
         if (handle.includes('l')) x1 += dx;
         if (handle.includes('r')) x2 += dx;
         if (handle.includes('t')) y1 += dy;
         if (handle.includes('b')) y2 += dy;
         const newS = Math.max(10, Math.max(x2 - x1, y2 - y1));
-        const units = 21 + 2 * (sp.border || 1);
+        const units = mods + 2 * bd;
         el.props.boxsize = Math.max(1, Math.round(newS / units));
         el.props.x = Math.round(x1);
         el.props.y = Math.round(y1);
@@ -1237,7 +1337,13 @@
         const isReq = req.has(key);
         const lbl = `<label${isReq ? ' class="required"' : ''}>${key}</label>`;
         let input = '';
-        if (meta.t === 'num') input = `<input type="number" value="${val}" step="any" onchange="updateProp(${el.id},'${key}',this.value,'num')">`;
+        if (meta.t === 'num') {
+          let step = 'any'; let min = '';
+          if (key === 'module_width') { step = '0.1'; min = '0.1'; }
+          else if (['x', 'y', 'width', 'height', 'size', 'radius'].includes(key)) { step = '1'; }
+          else if (min === '') min = '0';
+          input = `<input type="number" value="${val}" step="${step}" min="${min}" onchange="updateProp(${el.id},'${key}',this.value,'num')">`;
+        }
         else if (meta.t === 'bool') input = `<select onchange="updateProp(${el.id},'${key}',this.value,'bool')"><option value="true"${val ? 'selected' : ''}>true</option><option value="false"${!val ? 'selected' : ''}>false</option></select>`;
         else if (meta.t === 'sel') input = `<select onchange="updateProp(${el.id},'${key}',this.value,'str')">${meta.opts.map(o => `<option${o == val ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
         else if (meta.t === 'color_sel') input = `<select onchange="updateProp(${el.id},'${key}',this.value,'str')"><option value=""${val === '' ? ' selected' : ''}>—</option><option value="white"${val === 'white' ? ' selected' : ''}>white</option><option value="black"${val === 'black' ? ' selected' : ''}>black</option><option value="red"${val === 'red' ? ' selected' : ''}>red</option><option value="yellow"${val === 'yellow' ? ' selected' : ''}>yellow</option></select>`;
@@ -1262,7 +1368,7 @@
     function renderYaml() {
       const rot = document.getElementById('rotateSelect').value;
       const bg = document.getElementById('bgSelect').value;
-      let yaml = 'action: gicisky.write\ndata:\n';
+      let yaml = `action: gicisky.write\n# Generated by Editor v${EDITOR_VERSION}\ndata:\n`;
       if (rot !== '0') yaml += `  rotate: ${rot}\n`;
       if (bg !== 'white') yaml += `  background: ${bg}\n`;
       yaml += '  payload:\n';
@@ -1282,7 +1388,8 @@
           if (!req.has(key) && val === defaults[key]) continue;
           // Format value
           let yval = val;
-          if (typeof val === 'string' && (val.includes(':') || val.includes('#') || val.includes('{') || val.includes('"') || val.includes("'") || val.match(/^\s/) || val === '')) yval = `"${val}"`;
+          if (el.type === 'barcode' && key === 'data') yval = `"${val}"`;
+          else if (typeof val === 'string' && (val.includes(':') || val.includes('#') || val.includes('{') || val.includes('"') || val.includes("'") || val.match(/^\s/) || val === '')) yval = `"${val}"`;
           yaml += `      ${key}: ${yval}\n`;
         }
         // Diagram bars sub-object
@@ -1346,6 +1453,7 @@
     // === INIT ===
     window.addEventListener('resize', () => { updateScale(); refresh(); });
     { const [w, h] = document.getElementById('deviceSelect').value.split(',').map(Number); deviceW = w; deviceH = h; }
+    document.querySelector('.header h1').textContent += ` v${EDITOR_VERSION}`;
     applyRotation();
   </script>
 </body>
