@@ -609,7 +609,8 @@
       const a = (anchor || 'lt').toLowerCase();
       const hChar = a[0] || 'l', vChar = a[1] || 't';
       const alignMap = { l: 'left', m: 'center', r: 'right' };
-      const baseMap = { a: 'alphabetic', t: 'top', m: 'middle', s: 'alphabetic', b: 'bottom', d: 'bottom' };
+      // PIL 'a' (ascender) is virtually 'top'
+      const baseMap = { a: 'top', t: 'top', m: 'middle', s: 'alphabetic', b: 'bottom', d: 'bottom' };
       return { textAlign: alignMap[hChar] || 'left', textBaseline: baseMap[vChar] || 'top' };
     }
     // Get offset from anchor point to top-left corner of bbox
@@ -621,7 +622,8 @@
       else if (hChar === 'r') ox = -w;
       if (vChar === 'm') oy = -h / 2;
       else if (vChar === 'b' || vChar === 'd') oy = -h;
-      else if (vChar === 'a' || vChar === 's') oy = -h * 0.8; // approximate baseline
+      else if (vChar === 's') oy = -h * 0.8; // approximate baseline
+      // 'a' (ascender/top) -> oy = 0
       return { ox, oy };
     }
 
