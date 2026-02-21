@@ -251,6 +251,7 @@
         <select id="optionsSelect">
           <option value="0B">2.1인치 (250x122) 검정 & 흰색 & 빨강</option>
           <option value="33">2.9인치 (296x128) 검정 & 흰색 & 빨강</option>
+          <option value="22B">3.7인치 (240x416) 검정 & 흰색 & 빨강</option>
           <option value="4B">4.2인치 (400x300) 검정 & 흰색 & 빨강</option>
           <option value="2B">7.5인치 (800x480) 검정 & 흰색 & 빨강</option>
           <option value="8B">10.2인치 (960x640) 검정 & 흰색 & 빨강</option>
@@ -326,7 +327,7 @@
     </div>
     <div class="step-container">
       <div class="version">
-        Version : 260206
+        Version : 260221
         <a href="https://github.com/eigger/eigger.github.io" target="_blank">GitHub (eigger)</a>
       </div>
 
@@ -470,6 +471,12 @@
               document.getElementById('myImage').style.maxWidth = '550px';
               document.getElementById('rotationCheckbox').checked = true;
               document.getElementById('compressionCheckbox').checked = true;
+              break;
+            case 0x22B:
+              document.getElementById('heightInput').value = "416";
+              document.getElementById('widthInput').value = "240";
+              document.getElementById('myImage').style.maxWidth = '350px';
+              document.getElementById('mirrorCheckbox').checked = true;
               break;
           }
         },
