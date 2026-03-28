@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gicisky Image Uploader</title>
+  <style>
+    :root {
+      --bg-color: #f8f9fa;
+      --text-color: #333;
+      --primary-color: #007bff;
+      --secondary-color: #555;
+      --button-bg: #000000;
+      --button-hover: #5e5d5d;
+      --container-bg: white;
+      --shadow-color: rgba(0, 0, 0, 0.1);
+      --status-bg: #f3f3f3;
+      --border-color: #d9d9d9;
+    }
+
+    [data-theme="dark"] {
+      --bg-color: #121212;
+      --text-color: #f8f9fa;
+      --primary-color: #90caf9;
+      --secondary-color: #ccc;
+      --button-bg: #3f3f3f;
+      --button-hover: #a0a0a0;
+      --container-bg: #1e1e1e;
+      --shadow-color: rgba(255, 255, 255, 0.08);
+      --status-bg: #333;
+      --border-color: #4a4a4a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    h1 {
+      color: var(--primary-color);
+      margin: 0;
+      font-size: 22px;
+    }
+
+    label {
+      font-weight: bold;
+      color: var(--secondary-color);
+      font-size: 14px;
+    }
+
+    .info {
+      font-size: 13px;
+      margin: 8px 0;
+      color: var(--secondary-color);
+      line-height: 1.4;
+    }
+
+    input,
+    select,
+    button {
+      padding: 6px 8px;
+      margin: 4px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      font-size: 14px;
+    }
+
+    input,
+    select {
+      min-width: 180px;
+      text-align: center;
+      color: var(--text-color);
+      background-color: var(--bg-color);
+    }
+
+    button {
+      background-color: var(--button-bg);
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      border: none;
+    }
+
+    button:hover {
+      background-color: var(--button-hover);
+    }
+
+    button:disabled {
+      background-color: #bdbdbd;
+      cursor: not-allowed;
+    }
+
+    .container {
+      max-width: 620px;
+      margin: 0 auto;
+      background: var(--container-bg);
+      padding: 8px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px var(--shadow-color);
+    }
+
+    .step-container {
+      text-align: left;
+      max-width: 620px;
+      margin: 8px auto;
+      background: var(--container-bg);
+      padding: 10px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px var(--shadow-color);
+    }
+
+    .image-container {
+      border: 1px solid var(--border-color);
+      max-width: 560px;
+      margin: 8px auto;
+      background: white;
+      padding: 6px;
+      border-radius: 14px;
+      box-shadow: 0 0 10px var(--shadow-color);
+    }
+
+    canvas {
+      border: 1px solid var(--border-color);
+      display: block;
+      margin: 10px auto;
+      touch-action: none;
+      image-rendering: pixelated;
+    }
+
+    .theme-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .theme-toggle {
+      max-width: 50px;
+      font-size: 24px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-color);
+    }
+
+    .slider-container {
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .slider-container label {
+      width: 210px;
+      max-width: 210px;
+    }
+
+    .file-upload,
+    .select-row,
+    .send-image {
+      text-align: center;
+      margin-top: 8px;
+    }
+
+    #pixelData {
+      display: none;
+    }
+
+    #status,
+    #log {
+      text-align: left;
+      padding: 10px;
+      border-radius: 8px;
+      background-color: var(--status-bg);
+      color: var(--text-color);
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    #log {
+      height: 120px;
+      overflow: auto;
+    }
+
+    .version {
+      text-align: left;
+      font-size: 12px;
+      color: var(--secondary-color);
+    }
+
+    .hidden-options {
+      display: none;
+    }
+
+    .mono-note {
+      font-size: 12px;
+      color: var(--secondary-color);
+      text-align: center;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+
+<body data-theme="light">
+  <div class="container">
+    <div class="theme-container">
+      <button class="theme-toggle" id="themeToggle">☀️</button>
+      <h1>Gicisky Image Uploader</h1>
+    </div>
+    <div id="ble-support" class="info"></div>
+
+    <div class="step-container">
+      <label>Step 1: Select your display</label>
+      <div class="select-row">
+        <select id="optionsSelect"></select>
+      </div>
+      <div class="mono-note" id="displayDetails"></div>
+    </div>
+
+    <div class="step-container">
+      <label>Step 2: Choose an image to upload</label>
+      <div class="file-upload">
+        <input type="file" id="imageUpload" accept="image/*">
+        <button id="saveButton">Save Preview</button>
+      </div>
+    </div>
+
+    <div class="hidden-options">
+      <input type="text" id="widthInput" value="250">
+      <input type="text" id="heightInput" value="128">
+      <input type="checkbox" id="secondColorCheckbox">
+      <input type="checkbox" id="rotationCheckbox">
+      <input type="checkbox" id="mirrorCheckbox">
+      <input type="checkbox" id="tftCheckbox">
+      <input type="checkbox" id="compressionCheckbox">
+      <input type="checkbox" id="invertLuminanceCheckbox">
+    </div>
+
+    <div class="step-container">
+      <label>Step 3: Adjust the image</label><br>
+      <div class="info">Drag to move the image. Use the mouse wheel to zoom.</div>
+      <div class="image-container" id="myImage">
+        <canvas id="myCanvas"></canvas>
+      </div>
+
+      <div class="slider-container">
+        <label for="luminanceSlider">Black / White threshold: <span id="lumVal">128</span></label>
+        <input type="range" id="luminanceSlider" min="0" max="255" value="128">
+      </div>
+
+      <div class="slider-container">
+        <label for="accentSlider">BWR accent threshold: <span id="accentVal">170</span></label>
+        <input type="range" id="accentSlider" min="0" max="255" value="170">
+      </div>
+
+      <div class="slider-container">
+        <label for="redSlider">BWRY red threshold: <span id="redVal">128</span></label>
+        <input type="range" id="redSlider" min="0" max="255" value="128">
+      </div>
+
+      <div class="slider-container">
+        <label for="yellowSlider">BWRY yellow threshold: <span id="yellowVal">128</span></label>
+        <input type="range" id="yellowSlider" min="0" max="255" value="128">
+      </div>
+
+      <div class="slider-container">
+        <label for="accentModeSelect">BWR accent mode</label>
+        <select id="accentModeSelect">
+          <option value="red">Red</option>
+          <option value="yellow">Yellow</option>
+          <option value="red-or-yellow" selected>Red + Yellow</option>
+        </select>
+      </div>
+    </div>
+
+    <textarea id="pixelData"></textarea>
+
+    <div class="step-container">
+      <label>Step 4: Connect to the display and upload</label><br>
+      <div class="info">Click Upload Image and wait for the display to appear.</div>
+      <div class="info">Examples: NEMR92127864 or PICKSMART</div>
+      <div class="send-image">
+        <button id="uploadButton">Upload Image</button>
+      </div>
+      <div id="status"></div>
+      <div id="log"></div>
+    </div>
+
+    <div class="step-container">
+      <div class="version">
+        Version: 260328
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const DISPLAY_MODELS = [
+        { key: "bwr-250x122", label: '2.1" (250x122) BWR', family: "BWR", width: 250, height: 122, secondColor: true, rotation: false, mirror: false, tft: false, compression: false, invertLuminance: false, accentEnabled: true },
+        { key: "bwry-250x122", label: '2.1" (250x122) BWRY', family: "BWRY", width: 250, height: 122, secondColor: true, rotation: false, mirror: false, tft: false, compression: false, invertLuminance: false, accentEnabled: true },
+        { key: "mono-250x132", label: '2.1" (250x132) Mono', family: "MONO", width: 250, height: 132, secondColor: false, rotation: false, mirror: false, tft: true, compression: false, invertLuminance: false, accentEnabled: false },
+
+        { key: "bwr-296x128", label: '2.9" (296x128) BWR', family: "BWR", width: 296, height: 128, secondColor: true, rotation: false, mirror: true, tft: false, compression: false, invertLuminance: false, accentEnabled: true },
+        { key: "bwry-296x128", label: '2.9" (296x128) BWRY', family: "BWRY", width: 296, height: 128, secondColor: true, rotation: false, mirror: false, tft: false, compression: false, invertLuminance: false, accentEnabled: true },
+
+        { key: "bwr-240x416", label: '3.7" (240x416) BWR', family: "BWR", width: 240, height: 416, secondColor: true, rotation: true, mirror: true, tft: false, compression: true, invertLuminance: false, accentEnabled: true },
+        { key: "bwry-240x416", label: '3.7" (240x416) BWRY', family: "BWRY", width: 240, height: 416, secondColor: true, rotation: false, mirror: false, tft: false, compression: false, invertLuminance: false, accentEnabled: true },
+
+        { key: "bwr-400x300", label: '4.2" (400x300) BWR', family: "BWR", width: 400, height: 300, secondColor: true, rotation: true, mirror: false, tft: false, compression: false, invertLuminance: false, accentEnabled: true },
+        { key: "bwry-400x300", label: '4.2" (400x300) BWRY', family: "BWRY", width: 400, height: 300, secondColor: true, rotation: false, mirror: false, tft: false, compression: false, invertLuminance: false, accentEnabled: true },
+
+        { key: "bwr-800x480", label: '7.5" (800x480) BWR', family: "BWR", width: 800, height: 480, secondColor: true, rotation: true, mirror: true, tft: false, compression: true, invertLuminance: true, accentEnabled: true },
+        { key: "bwry-800x480", label: '7.5" (800x480) BWRY', family: "BWRY", width: 800, height: 480, secondColor: true, rotation: false, mirror: false, tft: false, compression: false, invertLuminance: false, accentEnabled: true },
+
+        { key: "bwr-960x640", label: '10.2" (960x640) BWR', family: "BWR", width: 960, height: 640, secondColor: true, rotation: true, mirror: false, tft: false, compression: true, invertLuminance: false, accentEnabled: true },
+        { key: "bwry-960x640", label: '10.2" (960x640) BWRY', family: "BWRY", width: 960, height: 640, secondColor: true, rotation: false, mirror: false, tft: false, compression: false, invertLuminance: false, accentEnabled: true }
+      ];
+
+      const Utils = {
+        bufferToHex(buffer) {
+          return [...new Uint8Array(buffer)]
+            .map(x => x.toString(16).padStart(2, '0'))
+            .join('');
+        },
+        hexToBytes(hex) {
+          const bytes = [];
+          for (let c = 0; c < hex.length; c += 2) {
+            bytes.push(parseInt(hex.substr(c, 2), 16));
+          }
+          return new Uint8Array(bytes);
+        },
+        bytesToHex(data) {
+          return Array.from(new Uint8Array(data))
+            .map(i => ("0" + i.toString(16)).slice(-2))
+            .join('');
+        },
+        intToHex(num) {
+          const hexStr = ("00000000" + num.toString(16)).slice(-8);
+          return hexStr.substring(6, 8) + hexStr.substring(4, 6) + hexStr.substring(2, 4) + hexStr.substring(0, 2);
+        }
+      };
+
+      function setStatus(statusText) {
+        document.getElementById("status").innerHTML = statusText;
+      }
+
+      function addLog(logText) {
+        const now = new Date();
+        const time = ("0" + now.getHours()).slice(-2) + ":" +
+          ("0" + now.getMinutes()).slice(-2) + ":" +
+          ("0" + now.getSeconds()).slice(-2) + " : ";
+        const logEl = document.getElementById("log");
+        logEl.innerHTML += time + logText + '<br>';
+        console.log(time + logText);
+        while ((logEl.innerHTML.match(/<br>/g) || []).length > 100) {
+          const firstBreak = logEl.innerHTML.indexOf("<br>");
+          logEl.innerHTML = logEl.innerHTML.substring(firstBreak + 4);
+        }
+      }
+
+      function handleBLEError(error) {
+        console.error(error);
+        setStatus("Error: " + error);
+        BLEManager.disconnect();
+        if (BLEManager.bleDevice && BLEManager.bleDevice.gatt.connected) {
+          BLEManager.bleDevice.gatt.disconnect();
+        }
+      }
+
+      function getAccentMode() {
+        return document.getElementById('accentModeSelect').value;
+      }
+
+      function isAccentPixel(r, g, b, threshold, mode) {
+        const isRed = r > threshold && g < threshold && b < threshold;
+        const isYellow = r > threshold && g > threshold && b < threshold;
+
+        switch (mode) {
+          case "yellow":
+            return isYellow;
+          case "red-or-yellow":
+            return isRed || isYellow;
+          case "red":
+          default:
+            return isRed;
+        }
+      }
+
+      function getAccentPreviewColor(mode) {
+        if (mode === "yellow") return [255, 220, 0];
+        if (mode === "red-or-yellow") return [255, 170, 0];
+        return [255, 0, 0];
+      }
+
+      function getSelectedModel() {
+        const key = document.getElementById("optionsSelect").value;
+        return DISPLAY_MODELS.find(m => m.key === key);
+      }
+
+      const ThemeManager = {
+        toggleTheme() {
+          const body = document.body;
+          const toggleBtn = document.getElementById('themeToggle');
+          const currentTheme = body.getAttribute("data-theme");
+          const newTheme = currentTheme === "light" ? "dark" : "light";
+          body.setAttribute("data-theme", newTheme);
+          toggleBtn.textContent = newTheme === "light" ? "☀️" : "🌙";
+        }
+      };
+
+      const CanvasManager = {
+        container: document.getElementById("myImage"),
+        canvas: document.getElementById('myCanvas'),
+        ctx: document.getElementById('myCanvas').getContext('2d'),
+        originalImageData: null,
+        image: null,
+        scale: 1,
+        newW: 0,
+        newH: 0,
+        offsetX: 0,
+        offsetY: 0,
+
+        initCanvas() {
+          const model = getSelectedModel();
+          document.getElementById('imageUpload').value = '';
+          document.getElementById("saveButton").disabled = true;
+          this.originalImageData = null;
+          this.image = null;
+          this.scale = 1;
+          this.newW = 0;
+          this.newH = 0;
+          this.offsetX = 0;
+          this.offsetY = 0;
+
+          document.getElementById('widthInput').value = model.width;
+          document.getElementById('heightInput').value = model.height;
+          document.getElementById('secondColorCheckbox').checked = model.secondColor;
+          document.getElementById('rotationCheckbox').checked = model.rotation;
+          document.getElementById('mirrorCheckbox').checked = model.mirror;
+          document.getElementById('tftCheckbox').checked = model.tft;
+          document.getElementById('compressionCheckbox').checked = model.compression;
+          document.getElementById('invertLuminanceCheckbox').checked = model.invertLuminance;
+
+          document.getElementById('accentSlider').disabled = !model.accentEnabled || model.family !== 'BWR';
+          document.getElementById('accentModeSelect').disabled = !model.accentEnabled || model.family !== 'BWR';
+          document.getElementById('redSlider').disabled = model.family !== 'BWRY';
+          document.getElementById('yellowSlider').disabled = model.family !== 'BWRY';
+
+          this.canvas.width = model.width;
+          this.canvas.height = model.height;
+          this.canvas.removeAttribute("style");
+          if (this.canvas.width > this.container.clientWidth - 20) {
+            this.canvas.style.width = `${this.container.clientWidth - 20}px`;
+          }
+
+          this.container.style.maxWidth = `${Math.min(model.width + 40, 560)}px`;
+          this.container.style.background = model.tft ? '#cccccc' : 'white';
+
+          this.ctx.fillStyle = model.tft ? '#969696' : 'white';
+          this.ctx.fillRect(0, 0, model.width, model.height);
+
+          document.getElementById("displayDetails").textContent =
+            `${model.family} • ${model.width} × ${model.height}`;
+          setStatus("");
+        },
+
+        displayOverlay() {
+          const model = getSelectedModel();
+          if (!this.originalImageData) return;
+
+          if (model.family === "BWRY") {
+            this.displayOverlayBWRY();
+          } else {
+            this.displayOverlayBWR();
+          }
+          this.getPixelData();
+        },
+
+        displayOverlayBWR() {
+          const width = this.canvas.width;
+          const height = this.canvas.height;
+          const origData = this.originalImageData;
+          const bwData = this.ctx.createImageData(width, height);
+          const accentOverlayData = this.ctx.createImageData(width, height);
+          const finalData = this.ctx.createImageData(width, height);
+
+          const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
+          const accentThreshold = parseInt(document.getElementById('accentSlider').value);
+          const secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
+          const tftEnabled = document.getElementById('tftCheckbox').checked;
+          const accentMode = getAccentMode();
+          const accentColor = getAccentPreviewColor(accentMode);
+
+          for (let i = 0; i < origData.data.length; i += 4) {
+            const r = origData.data[i];
+            const g = origData.data[i + 1];
+            const b = origData.data[i + 2];
+
+            const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            if (luminance > lumThreshold) {
+              bwData.data[i] = tftEnabled ? 150 : 255;
+              bwData.data[i + 1] = tftEnabled ? 150 : 255;
+              bwData.data[i + 2] = tftEnabled ? 150 : 255;
+              bwData.data[i + 3] = 255;
+            } else {
+              bwData.data[i] = 0;
+              bwData.data[i + 1] = 0;
+              bwData.data[i + 2] = 0;
+              bwData.data[i + 3] = 255;
+            }
+
+            if (secondColorEnabled && isAccentPixel(r, g, b, accentThreshold, accentMode)) {
+              accentOverlayData.data[i] = accentColor[0];
+              accentOverlayData.data[i + 1] = accentColor[1];
+              accentOverlayData.data[i + 2] = accentColor[2];
+              accentOverlayData.data[i + 3] = 255;
+            } else {
+              accentOverlayData.data[i] = 0;
+              accentOverlayData.data[i + 1] = 0;
+              accentOverlayData.data[i + 2] = 0;
+              accentOverlayData.data[i + 3] = 0;
+            }
+
+            if (accentOverlayData.data[i + 3] > 0) {
+              finalData.data[i] = accentOverlayData.data[i];
+              finalData.data[i + 1] = accentOverlayData.data[i + 1];
+              finalData.data[i + 2] = accentOverlayData.data[i + 2];
+              finalData.data[i + 3] = 255;
+            } else {
+              finalData.data[i] = bwData.data[i];
+              finalData.data[i + 1] = bwData.data[i + 1];
+              finalData.data[i + 2] = bwData.data[i + 2];
+              finalData.data[i + 3] = 255;
+            }
+          }
+
+          this.ctx.clearRect(0, 0, width, height);
+          this.ctx.putImageData(finalData, 0, 0);
+        },
+
+        displayOverlayBWRY() {
+          const width = this.canvas.width;
+          const height = this.canvas.height;
+          const origData = this.originalImageData;
+          const finalData = this.ctx.createImageData(width, height);
+
+          for (let i = 0; i < origData.data.length; i += 4) {
+            const r = origData.data[i];
+            const g = origData.data[i + 1];
+            const b = origData.data[i + 2];
+            const code = this.classifyBWRYPixel(r, g, b);
+
+            if (code === 0) { // black
+              finalData.data[i] = 0;
+              finalData.data[i + 1] = 0;
+              finalData.data[i + 2] = 0;
+            } else if (code === 1) { // white
+              finalData.data[i] = 255;
+              finalData.data[i + 1] = 255;
+              finalData.data[i + 2] = 255;
+            } else if (code === 2) { // yellow
+              finalData.data[i] = 255;
+              finalData.data[i + 1] = 220;
+              finalData.data[i + 2] = 0;
+            } else { // red
+              finalData.data[i] = 255;
+              finalData.data[i + 1] = 0;
+              finalData.data[i + 2] = 0;
+            }
+            finalData.data[i + 3] = 255;
+          }
+
+          this.ctx.clearRect(0, 0, width, height);
+          this.ctx.putImageData(finalData, 0, 0);
+        },
+
+        classifyBWRYPixel(r, g, b) {
+          const redThreshold = parseInt(document.getElementById('redSlider').value);
+          const yellowThreshold = parseInt(document.getElementById('yellowSlider').value);
+          const white = (((r * 38) + (g * 75) + (b * 15)) >> 7) > 128 ? 1 : 0;
+          let red = r > redThreshold ? 1 : 0;
+          let green = g > yellowThreshold ? 1 : 0;
+          const blue = b > 128 ? 1 : 0;
+
+          if (green && red && blue) {
+            green = 0;
+          }
+          if (red && white) {
+            red = 0;
+          }
+
+          if (green) return 2;  // yellow
+          if (red) return 3;    // red
+          if (white) return 1;  // white
+          return 0;             // black
+        },
+
+        encodeBWRYFromCanvas(canvas) {
+          const srcW = canvas.width;
+          const srcH = canvas.height;
+
+          const rotCanvas = document.createElement("canvas");
+          rotCanvas.width = srcH;
+          rotCanvas.height = srcW;
+          const rctx = rotCanvas.getContext("2d");
+
+          rctx.translate(0, rotCanvas.height);
+          rctx.rotate(-Math.PI / 2);
+          rctx.drawImage(canvas, 0, 0);
+
+          const width = rotCanvas.width;
+          const height = rotCanvas.height;
+          const img = rctx.getImageData(0, 0, width, height);
+          const pixels = img.data;
+          const out = new Uint8Array((width * height) / 4);
+
+          let outIndex = 0;
+          let pixelInByte = 0;
+
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              const idx = (y * width + x) * 4;
+              const code = this.classifyBWRYPixel(
+                pixels[idx],
+                pixels[idx + 1],
+                pixels[idx + 2]
+              );
+
+              const shift = (3 - pixelInByte) * 2;
+              out[outIndex] |= (code << shift);
+
+              pixelInByte++;
+              if (pixelInByte > 3) {
+                outIndex++;
+                pixelInByte = 0;
+              }
+            }
+          }
+          return out;
+        },
+
+        getPixelData() {
+          const model = getSelectedModel();
+          const pixelDataTextarea = document.getElementById('pixelData');
+
+          if (model.family === "BWRY") {
+            pixelDataTextarea.value = Utils.bytesToHex(
+              this.encodeBWRYFromCanvas(document.getElementById('myCanvas'))
+            );
+            return;
+          }
+
+          const secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
+          const rotationEnabled = document.getElementById('rotationCheckbox').checked;
+          const tftEnabled = document.getElementById('tftCheckbox').checked;
+          const mirrorEnabled = document.getElementById('mirrorCheckbox').checked;
+          const compressionEnabled = document.getElementById('compressionCheckbox').checked;
+          const invertLuminanceEnabled = document.getElementById('invertLuminanceCheckbox').checked;
+
+          const canvas = document.getElementById('myCanvas');
+          const ctx = canvas.getContext('2d');
+          let width = canvas.width;
+          let height = canvas.height;
+          let imageData = ctx.getImageData(0, 0, width, height);
+
+          const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
+          const accentThreshold = parseInt(document.getElementById('accentSlider').value);
+          const accentMode = getAccentMode();
+
+          let originalCanvas = document.createElement("canvas");
+          let originalCtx = originalCanvas.getContext("2d");
+          originalCanvas.width = canvas.width;
+          originalCanvas.height = canvas.height;
+          originalCtx.putImageData(imageData, 0, 0);
+
+          if (tftEnabled) {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            width = canvas.width / 2;
+            height = canvas.height * 2;
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            tempCtx.drawImage(originalCanvas, 0, 0, imageData.width, imageData.height, 0, 0, width, height);
+            imageData = tempCtx.getImageData(0, 0, width, height);
+            originalCanvas = tempCanvas;
+          }
+
+          if (mirrorEnabled) {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            tempCtx.translate(width, 0);
+            tempCtx.scale(-1, 1);
+            tempCtx.drawImage(originalCanvas, 0, 0, width, height, 0, 0, width, height);
+            imageData = tempCtx.getImageData(0, 0, width, height);
+          }
+
+          const pixels = imageData.data;
+          const byteData = [];
+          const byteDataAccent = [];
+          let currentByte = 0;
+          let currentByteAccent = 0;
+          let bitPosition = 7;
+
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              let curr = (y * width + x) * 4;
+              if (rotationEnabled) {
+                curr = ((x * height) + y) * 4;
+              }
+
+              const r = pixels[curr];
+              const g = pixels[curr + 1];
+              const b = pixels[curr + 2];
+              const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+
+              if (invertLuminanceEnabled) {
+                if (luminance < lumThreshold) currentByte |= (1 << bitPosition);
+              } else {
+                if (luminance > lumThreshold) currentByte |= (1 << bitPosition);
+              }
+
+              if (isAccentPixel(r, g, b, accentThreshold, accentMode)) {
+                currentByteAccent |= (1 << bitPosition);
+              }
+
+              bitPosition--;
+              if (bitPosition < 0) {
+                byteData.push(currentByte);
+                byteDataAccent.push(currentByteAccent);
+                currentByte = 0;
+                currentByteAccent = 0;
+                bitPosition = 7;
+              }
+            }
+          }
+
+          if (bitPosition !== 7) {
+            byteData.push(currentByte);
+            byteDataAccent.push(currentByteAccent);
+          }
+
+          let byteDataCompressed = [];
+          if (compressionEnabled) {
+            let currentPosi = 0;
+            const byte_per_line = height / 8;
+            byteDataCompressed.push(0x00, 0x00, 0x00, 0x00);
+
+            for (let i = 0; i < width; i += 1) {
+              byteDataCompressed.push(0x75);
+              byteDataCompressed.push(byte_per_line + 7);
+              byteDataCompressed.push(byte_per_line);
+              byteDataCompressed.push(0x00, 0x00, 0x00, 0x00);
+              for (let b = 0; b < byte_per_line; b++) {
+                byteDataCompressed.push(byteData[currentPosi++]);
+              }
+            }
+
+            currentPosi = 0;
+            if (secondColorEnabled) {
+              for (let i = 0; i < width; i += 1) {
+                byteDataCompressed.push(0x75);
+                byteDataCompressed.push(byte_per_line + 7);
+                byteDataCompressed.push(byte_per_line);
+                byteDataCompressed.push(0x00, 0x00, 0x00, 0x00);
+                for (let b = 0; b < byte_per_line; b++) {
+                  byteDataCompressed.push(byteDataAccent[currentPosi++]);
+                }
+              }
+            }
+
+            byteDataCompressed[0] = byteDataCompressed.length & 0xff;
+            byteDataCompressed[1] = (byteDataCompressed.length >> 8) & 0xff;
+            byteDataCompressed[2] = (byteDataCompressed.length >> 16) & 0xff;
+            byteDataCompressed[3] = (byteDataCompressed.length >> 24) & 0xff;
+          } else {
+            byteDataCompressed = [...byteData];
+            if (secondColorEnabled) {
+              byteDataCompressed.push(...byteDataAccent);
+            }
+          }
+
+          pixelDataTextarea.value = Utils.bufferToHex(byteDataCompressed);
+        },
+
+        drawImage(img) {
+          document.getElementById("saveButton").disabled = false;
+          this.image = img;
+          const canvasW = this.canvas.width;
+          const canvasH = this.canvas.height;
+          const scale = Math.max(canvasW / img.width, canvasH / img.height);
+          this.scale = scale;
+          this.newW = img.width * scale;
+          this.newH = img.height * scale;
+          this.offsetX = (canvasW - this.newW) / 2;
+          this.offsetY = (canvasH - this.newH) / 2;
+          this.render();
+        },
+
+        render() {
+          const canvasW = this.canvas.width;
+          const canvasH = this.canvas.height;
+          this.ctx.clearRect(0, 0, canvasW, canvasH);
+          this.ctx.fillStyle = 'white';
+          this.ctx.fillRect(0, 0, canvasW, canvasH);
+          if (this.image) {
+            this.ctx.drawImage(this.image, this.offsetX, this.offsetY, this.newW, this.newH);
+          }
+          this.originalImageData = this.ctx.getImageData(0, 0, canvasW, canvasH);
+          this.displayOverlay();
+        },
+
+        saveImage() {
+          const dataURL = this.canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.href = dataURL;
+          link.download = 'image.png';
+          link.click();
+        }
+      };
+
+      const LabelManager = {
+        populateOptions() {
+          const select = document.getElementById("optionsSelect");
+          select.innerHTML = "";
+          DISPLAY_MODELS.forEach(model => {
+            const option = document.createElement("option");
+            option.value = model.key;
+            option.textContent = model.label;
+            select.appendChild(option);
+          });
+          select.value = "bwr-296x128";
+        },
+        updateParameters() {
+          CanvasManager.initCanvas();
+          CanvasManager.displayOverlay();
+        }
+      };
+
+      const BLEManager = {
+        bleDevice: null,
+        gattServer: null,
+        bleService: null,
+        writeChar: null,
+        writeImageChar: null,
+        reconnectAttempts: 0,
+        imgHexData: "",
+        imgHexLength: 0,
+        uploadPartIndex: 0,
+        serviceUuid: 0,
+
+        checkSupport() {
+          if (!navigator.bluetooth) {
+            document.getElementById("ble-support").innerHTML =
+              "This browser does not support Web Bluetooth. Please use Chrome on a desktop computer.";
+            document.getElementById("uploadButton").disabled = true;
+          } else {
+            document.getElementById("ble-support").textContent = "";
+          }
+        },
+
+        reset() {
+          this.gattServer = null;
+          this.bleService = null;
+          this.writeChar = null;
+          this.writeImageChar = null;
+          this.imgHexData = "";
+          this.imgHexLength = 0;
+          this.uploadPartIndex = 0;
+          this.serviceUuid = 0;
+        },
+
+        async sendCommand(cmd) {
+          if (this.writeChar) {
+            try {
+              await this.writeChar.writeValue(cmd);
+            } catch (e) {
+              addLog("GATT operation in progress. Retrying...");
+              await new Promise(resolve => setTimeout(resolve, 500));
+              await this.writeChar.writeValue(cmd);
+            }
+          }
+        },
+
+        async sendCommandHex(cmdHex) {
+          const cmd = Utils.hexToBytes(cmdHex);
+          addLog('TX: ' + cmdHex);
+          await this.sendCommand(cmd);
+        },
+
+        async sendImageCommand(cmd) {
+          if (this.writeImageChar) {
+            try {
+              await this.writeImageChar.writeValue(cmd);
+            } catch (e) {
+              addLog("GATT operation in progress. Retrying...");
+              await new Promise(resolve => setTimeout(resolve, 500));
+              await this.writeImageChar.writeValue(cmd);
+            }
+          }
+        },
+
+        sendImageData() {
+          const imgData = document.getElementById('pixelData').value;
+          this.imgHexData = imgData.replace(/(?:\r\n|\r|\n|,|0x| )/g, '');
+          this.imgHexLength = this.imgHexData.length;
+          this.uploadPartIndex = 0;
+          addLog("Starting image upload");
+          setStatus("Uploading image...");
+          this.sendCommandHex("01");
+        },
+
+        handleImageState(dataHex) {
+          switch (dataHex.substring(0, 2)) {
+            case "01":
+              if (dataHex === "01f400") {
+                this.sendCommandHex("02" + Utils.intToHex(this.imgHexLength / 2) + "000000");
+              } else {
+                addLog("Reconnect the display before sending a new image.");
+              }
+              break;
+            case "02":
+              addLog("Upload stage 3");
+              this.sendCommandHex("03");
+              break;
+            case "05":
+              if (dataHex.substring(2, 4) === "08") {
+                addLog("Upload complete");
+                setStatus("Upload complete");
+                if (this.gattServer && this.gattServer.connected) {
+                  if (this.bleDevice && this.bleDevice.gatt.connected) {
+                    this.bleDevice.gatt.disconnect();
+                  }
+                  this.disconnect();
+                }
+              } else if (dataHex.substring(2, 4) !== "00") {
+                addLog("Upload error, transfer stopped.");
+              } else {
+                this.sendNextImagePart(dataHex.substring(4, 12));
+              }
+              break;
+          }
+        },
+
+        sendNextImagePart(partAckHex) {
+          if (this.imgHexData.length > 0) {
+            let currentPartHex = "";
+            if (partAckHex === Utils.intToHex(this.uploadPartIndex)) {
+              currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, 480);
+              this.imgHexData = this.imgHexData.substring(480);
+              this.uploadPartIndex++;
+            } else {
+              addLog("Retrying last chunk");
+              currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, 480);
+            }
+            this.sendImageCommand(Utils.hexToBytes(currentPartHex));
+          } else {
+            addLog("Upload complete");
+          }
+        },
+
+        disconnect() {
+          this.reset();
+          addLog('Disconnected');
+          document.getElementById("uploadButton").disabled = false;
+        },
+
+        handleNotification(data) {
+          addLog("RX: " + Utils.bytesToHex(data.buffer));
+          setTimeout(() => this.handleImageState(Utils.bytesToHex(data.buffer)), 50);
+        },
+
+        initiateConnection() {
+          document.getElementById("log").innerHTML = '';
+          document.getElementById("uploadButton").disabled = true;
+          setStatus("Selecting display...");
+          if (this.gattServer && this.gattServer.connected) {
+            if (this.bleDevice && this.bleDevice.gatt.connected) this.bleDevice.gatt.disconnect();
+            document.getElementById("uploadButton").disabled = false;
+          } else {
+            this.reconnectAttempts = 0;
+            navigator.bluetooth.requestDevice({
+              filters: [{ manufacturerData: [{ companyIdentifier: 0x5053 }] }],
+              optionalServices: [0xFEF0, 0xFDF0]
+            }).then(device => {
+              setStatus("Connecting: " + device.name);
+              device.addEventListener('gattserverdisconnected', () => this.disconnect());
+              this.bleDevice = device;
+              this.connect();
+            }).catch(handleBLEError);
+          }
+        },
+
+        connect() {
+          if (!this.writeChar) {
+            addLog("Connecting: " + this.bleDevice.name);
+            this.bleDevice.gatt.connect().then(server => {
+              this.gattServer = server;
+              return this.gattServer.getPrimaryServices();
+            }).then(services => {
+              services.forEach(service => {
+                if (this.serviceUuid === 0) {
+                  this.serviceUuid = parseInt(service.uuid.substring(4, 8), 16);
+                  addLog("Service UUID: " + service.uuid.toString());
+                  addLog("Base UUID: 0x" + this.serviceUuid.toString(16));
+                }
+              });
+              return this.gattServer.getPrimaryService(this.serviceUuid);
+            }).then(service => {
+              this.bleService = service;
+              return this.bleService.getCharacteristic(this.serviceUuid + 2);
+            }).then(characteristic => {
+              this.writeImageChar = characteristic;
+              return this.bleService.getCharacteristic(this.serviceUuid + 1);
+            }).then(characteristic => {
+              this.writeChar = characteristic;
+              setTimeout(() => this.sendImageData(), 1000);
+              return this.writeChar.startNotifications().then(() => {
+                this.writeChar.addEventListener('characteristicvaluechanged', event => {
+                  this.handleNotification(event.target.value);
+                });
+              });
+            }).catch(handleBLEError);
+          }
+        }
+      };
+
+      document.getElementById('themeToggle').addEventListener('click', ThemeManager.toggleTheme);
+      document.getElementById('optionsSelect').addEventListener('change', () => LabelManager.updateParameters());
+      document.getElementById('imageUpload').addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+              CanvasManager.drawImage(img);
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      document.getElementById('luminanceSlider').addEventListener('input', function () {
+        document.getElementById('lumVal').textContent = this.value;
+        CanvasManager.displayOverlay();
+      });
+      document.getElementById('accentSlider').addEventListener('input', function () {
+        document.getElementById('accentVal').textContent = this.value;
+        CanvasManager.displayOverlay();
+      });
+      document.getElementById('redSlider').addEventListener('input', function () {
+        document.getElementById('redVal').textContent = this.value;
+        CanvasManager.displayOverlay();
+      });
+      document.getElementById('yellowSlider').addEventListener('input', function () {
+        document.getElementById('yellowVal').textContent = this.value;
+        CanvasManager.displayOverlay();
+      });
+      document.getElementById('accentModeSelect').addEventListener('change', function () {
+        CanvasManager.displayOverlay();
+      });
+      document.getElementById('uploadButton').addEventListener('click', () => BLEManager.initiateConnection());
+      document.getElementById('saveButton').addEventListener('click', () => CanvasManager.saveImage());
+
+      window.onload = function () {
+        LabelManager.populateOptions();
+        LabelManager.updateParameters();
+        BLEManager.checkSupport();
+      };
+
+      (function () {
+        const canvas = CanvasManager.canvas;
+        let isDragging = false;
+        let startX, startY;
+
+        canvas.addEventListener('mouseenter', () => { canvas.style.cursor = "grab"; });
+        canvas.addEventListener('mouseleave', () => {
+          canvas.style.cursor = "default";
+          isDragging = false;
+        });
+        canvas.addEventListener('mousedown', (e) => {
+          isDragging = true;
+          startX = e.offsetX;
+          startY = e.offsetY;
+          canvas.style.cursor = "grabbing";
+        });
+        canvas.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          const dx = e.offsetX - startX;
+          const dy = e.offsetY - startY;
+          CanvasManager.offsetX += dx;
+          CanvasManager.offsetY += dy;
+          startX = e.offsetX;
+          startY = e.offsetY;
+          CanvasManager.render();
+        });
+        canvas.addEventListener('mouseup', () => {
+          isDragging = false;
+          canvas.style.cursor = "grab";
+        });
+        canvas.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          if (!CanvasManager.image) return;
+          const zoomFactor = 1.1;
+          const oldScale = CanvasManager.scale;
+          const newScale = e.deltaY < 0 ? oldScale * zoomFactor : oldScale / zoomFactor;
+          const rect = canvas.getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
+          const imageX = (mouseX - CanvasManager.offsetX) / oldScale;
+          const imageY = (mouseY - CanvasManager.offsetY) / oldScale;
+          CanvasManager.scale = newScale;
+          CanvasManager.newW = CanvasManager.image.width * newScale;
+          CanvasManager.newH = CanvasManager.image.height * newScale;
+          CanvasManager.offsetX = mouseX - imageX * newScale;
+          CanvasManager.offsetY = mouseY - imageY * newScale;
+          CanvasManager.render();
+        });
+      })();
+    })();
+  </script>
+</body>
+
+</html>
