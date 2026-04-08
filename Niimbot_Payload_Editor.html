@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Niimbot Payload Layout Editor</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -342,7 +343,11 @@
       tab-size: 2;
       background: #0a0a1a;
       user-select: text;
-      cursor: text
+      cursor: text;
+      border: none;
+      resize: none;
+      outline: none;
+      width: 100%;
     }
 
     /* Canvas coordinate tooltip */
@@ -452,23 +457,26 @@
 
   <div class="yaml-wrap">
     <div class="yaml-header">
-      <h2>📄 YAML Output</h2>
-      <button class="btn copy" onclick="copyYaml()">📋 Copy</button>
+      <h2>📄 YAML Output / Input</h2>
+      <div>
+        <button class="btn" onclick="importYaml()" title="Paste YAML below and click Import">📥 Import</button>
+        <button class="btn copy" onclick="copyYaml()">📋 Copy</button>
+      </div>
     </div>
-    <div id="yaml-output">action: niimbot.print
+    <textarea id="yaml-output" spellcheck="false">action: niimbot.print
       data:
       width: 400
       height: 240
       payload: []
       target:
-      device_id: &lt;your device&gt;</div>
+      device_id: &lt;your device&gt;</textarea>
   </div>
 
   <div class="coord-tooltip" id="coordTooltip"></div>
 
   <script>
     // === STATE ===
-    const EDITOR_VERSION = '2026.02.12';
+    const EDITOR_VERSION = '2026.04.08';
     const DPI_SCALE = 300 / 25.4; // 11.81 px/mm
     let elements = [];
     let selectedId = null;
@@ -1335,7 +1343,10 @@
     }
 
     // === YAML GENERATION ===
-    function renderYaml() {
+    function renderYaml(force = false) {
+      const yamlEl = document.getElementById('yaml-output');
+      if (!force && document.activeElement === yamlEl) return;
+
       const rot = document.getElementById('rotateSelect').value;
       const bg = document.getElementById('bgSelect').value;
       const width = canvasW;
@@ -1381,11 +1392,66 @@
         }
       });
       yaml += 'target:\n  device_id: <your device>';
-      document.getElementById('yaml-output').textContent = yaml;
+      yamlEl.value = yaml;
+    }
+
+    function importYaml() {
+      try {
+        const text = document.getElementById('yaml-output').value;
+        const parsed = jsyaml.load(text);
+        if (!parsed || !parsed.data) throw new Error("Invalid YAML: Missing 'data' block");
+
+        const d = parsed.data;
+        if (d.width) { canvasW = d.width; document.getElementById('widthInput').value = d.width; }
+        if (d.height) { canvasH = d.height; document.getElementById('heightInput').value = d.height; }
+        if (d.rotate !== undefined) document.getElementById('rotateSelect').value = d.rotate;
+        if (d.background !== undefined) document.getElementById('bgSelect').value = d.background;
+        if (d.density !== undefined) document.getElementById('densityInput').value = d.density;
+
+        elements = [];
+        nextId = 1;
+        selectedId = null;
+
+        if (Array.isArray(d.payload)) {
+          d.payload.forEach(item => {
+            const type = item.type;
+            if (!type) return;
+            const props = JSON.parse(JSON.stringify(ELEMENT_DEFAULTS[type] || {}));
+            for (const [k, v] of Object.entries(item)) {
+              if (k === 'type') continue;
+              if (k === 'bars' && type === 'diagram') {
+                if (v.values !== undefined) props.bars_values = v.values;
+                if (v.color !== undefined) props.bars_color = v.color;
+                if (v.margin !== undefined) props.bars_margin = v.margin;
+                if (v.legend_size !== undefined) props.bars_legend_size = v.legend_size;
+                if (v.legend_color !== undefined) props.bars_legend_color = v.legend_color;
+                continue;
+              }
+              if (k === 'data' && type === 'plot' && Array.isArray(v)) {
+                if (v.length > 0) {
+                  const dItem = v[0];
+                  if (dItem.entity !== undefined) props.data_entity = dItem.entity;
+                  if (dItem.color !== undefined) props.data_color = dItem.color;
+                  if (dItem.width !== undefined) props.data_width = dItem.width;
+                }
+                continue;
+              }
+              props[k] = v;
+            }
+            elements.push({ id: nextId++, type, props });
+          });
+        }
+
+        updateScale();
+        refresh();
+        alert('YAML Imported Successfully!');
+      } catch (e) {
+        alert('Import Error: ' + e.message);
+      }
     }
 
     function copyYaml() {
-      const text = document.getElementById('yaml-output').textContent;
+      const text = document.getElementById('yaml-output').value;
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.querySelector('.btn.copy');
         btn.textContent = '✅ Copied!';
