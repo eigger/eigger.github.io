@@ -298,7 +298,7 @@
 
     <div class="step-container">
       <div class="version">
-        Version: 260328
+        Version: 260411
       </div>
     </div>
   </div>
@@ -377,31 +377,6 @@
         }
       }
 
-      function getAccentMode() {
-        return document.getElementById('accentModeSelect').value;
-      }
-
-      function isAccentPixel(r, g, b, threshold, mode) {
-        const isRed = r > threshold && g < threshold && b < threshold;
-        const isYellow = r > threshold && g > threshold && b < threshold;
-
-        switch (mode) {
-          case "yellow":
-            return isYellow;
-          case "red-or-yellow":
-            return isRed || isYellow;
-          case "red":
-          default:
-            return isRed;
-        }
-      }
-
-      function getAccentPreviewColor(mode) {
-        if (mode === "yellow") return [255, 220, 0];
-        if (mode === "red-or-yellow") return [255, 170, 0];
-        return [255, 0, 0];
-      }
-
       function getSelectedModel() {
         const key = document.getElementById("optionsSelect").value;
         return DISPLAY_MODELS.find(m => m.key === key);
@@ -452,18 +427,22 @@
           document.getElementById('invertLuminanceCheckbox').checked = model.invertLuminance;
 
           document.getElementById('accentSlider').disabled = !model.accentEnabled || model.family !== 'BWR';
-          document.getElementById('accentModeSelect').disabled = !model.accentEnabled || model.family !== 'BWR';
+          document.getElementById('accentModeSelect').disabled = true;
           document.getElementById('redSlider').disabled = model.family !== 'BWRY';
           document.getElementById('yellowSlider').disabled = model.family !== 'BWRY';
 
           this.canvas.width = model.width;
           this.canvas.height = model.height;
           this.canvas.removeAttribute("style");
-          if (this.canvas.width > this.container.clientWidth - 20) {
-            this.canvas.style.width = `${this.container.clientWidth - 20}px`;
+          if (this.canvas.width > this.container.clientWidth - 15) {
+            this.canvas.style.width = `${this.container.clientWidth - 15}px`;
           }
 
-          this.container.style.maxWidth = `${Math.min(model.width + 40, 560)}px`;
+          // Match Gicisky_Image_Uploader.html preview sizing for 4.2" / 7.5" panels
+          let previewMax = Math.min(model.width + 40, 560);
+          if (model.key === "bwr-400x300" || model.key === "bwry-400x300") previewMax = 450;
+          if (model.key === "bwr-800x480" || model.key === "bwry-800x480") previewMax = 530;
+          this.container.style.maxWidth = `${previewMax}px`;
           this.container.style.background = model.tft ? '#cccccc' : 'white';
 
           this.ctx.fillStyle = model.tft ? '#969696' : 'white';
@@ -498,8 +477,6 @@
           const accentThreshold = parseInt(document.getElementById('accentSlider').value);
           const secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
           const tftEnabled = document.getElementById('tftCheckbox').checked;
-          const accentMode = getAccentMode();
-          const accentColor = getAccentPreviewColor(accentMode);
 
           for (let i = 0; i < origData.data.length; i += 4) {
             const r = origData.data[i];
@@ -519,10 +496,11 @@
               bwData.data[i + 3] = 255;
             }
 
-            if (secondColorEnabled && isAccentPixel(r, g, b, accentThreshold, accentMode)) {
-              accentOverlayData.data[i] = accentColor[0];
-              accentOverlayData.data[i + 1] = accentColor[1];
-              accentOverlayData.data[i + 2] = accentColor[2];
+            // Same red-accent rule as Gicisky_Image_Uploader.html (r/threshold, g/threshold)
+            if (secondColorEnabled && r > accentThreshold && g < accentThreshold) {
+              accentOverlayData.data[i] = 255;
+              accentOverlayData.data[i + 1] = 0;
+              accentOverlayData.data[i + 2] = 0;
               accentOverlayData.data[i + 3] = 255;
             } else {
               accentOverlayData.data[i] = 0;
@@ -675,7 +653,6 @@
 
           const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
           const accentThreshold = parseInt(document.getElementById('accentSlider').value);
-          const accentMode = getAccentMode();
 
           let originalCanvas = document.createElement("canvas");
           let originalCtx = originalCanvas.getContext("2d");
@@ -692,7 +669,6 @@
             tempCanvas.height = height;
             tempCtx.drawImage(originalCanvas, 0, 0, imageData.width, imageData.height, 0, 0, width, height);
             imageData = tempCtx.getImageData(0, 0, width, height);
-            originalCanvas = tempCanvas;
           }
 
           if (mirrorEnabled) {
@@ -700,9 +676,13 @@
             const tempCtx = tempCanvas.getContext('2d');
             tempCanvas.width = width;
             tempCanvas.height = height;
-            tempCtx.translate(width, 0);
-            tempCtx.scale(-1, 1);
-            tempCtx.drawImage(originalCanvas, 0, 0, width, height, 0, 0, width, height);
+            tempCtx.translate(0, height);
+            tempCtx.scale(1, -1);
+            tempCtx.drawImage(
+              originalCanvas,
+              0, 0, imageData.width, imageData.height,
+              0, 0, width, height
+            );
             imageData = tempCtx.getImageData(0, 0, width, height);
           }
 
@@ -713,9 +693,9 @@
           let currentByteAccent = 0;
           let bitPosition = 7;
 
-          for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-              let curr = (y * width + x) * 4;
+          for (let x = 0; x < width; x++) {
+            for (let y = 0; y < height; y++) {
+              let curr = (Math.round(y * width) + x) * 4;
               if (rotationEnabled) {
                 curr = ((x * height) + y) * 4;
               }
@@ -731,7 +711,7 @@
                 if (luminance > lumThreshold) currentByte |= (1 << bitPosition);
               }
 
-              if (isAccentPixel(r, g, b, accentThreshold, accentMode)) {
+              if (r > accentThreshold && g < accentThreshold) {
                 currentByteAccent |= (1 << bitPosition);
               }
 
