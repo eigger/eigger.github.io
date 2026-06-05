@@ -5,160 +5,330 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gicisky Image Uploader</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap');
 
     :root {
-      --bg-color: #f8f9fa;
-      --text-color: #333;
-      --primary-color: #007bff;
-      --secondary-color: #555;
-      --button-bg: #000000;
-      --button-hover: #5e5d5d;
-      --container-bg: white;
-      --shadow-color: rgba(0, 0, 0, 0.1);
-      --status-bg: #f3f3f3;
+      --bg-color: #eef2f7;
+      --text-color: #1e293b;
+      --primary-color: #2563eb;
+      --primary-hover: #1d4ed8;
+      --secondary-color: #64748b;
+      --container-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --shadow-color: rgba(15, 23, 42, 0.08);
+      --status-bg: #f1f5f9;
+      --input-bg: #f8fafc;
+      --accent-soft: #eff6ff;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
     }
 
     [data-theme="dark"] {
-      --bg-color: #121212;
-      --text-color: #f8f9fa;
-      --primary-color: #90caf9;
-      --secondary-color: #ccc;
-      --button-bg: #3f3f3f;
-      --button-hover: #a0a0a0;
-      --container-bg: #1e1e1e;
-      --shadow-color: rgba(255, 255, 255, 0.1);
-      --status-bg: #333;
+      --bg-color: #0f172a;
+      --text-color: #e2e8f0;
+      --primary-color: #60a5fa;
+      --primary-hover: #93c5fd;
+      --secondary-color: #94a3b8;
+      --container-bg: #1e293b;
+      --border-color: #334155;
+      --shadow-color: rgba(0, 0, 0, 0.35);
+      --status-bg: #0f172a;
+      --input-bg: #334155;
+      --accent-soft: #1e3a5f;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
     }
 
     body {
       font-family: 'Nanum Gothic', sans-serif;
       text-align: center;
-      margin: 0px;
-      background-color: var(--bg-color);
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(160deg, var(--bg-color) 0%, var(--accent-soft) 100%);
       color: var(--text-color);
-      transition: background-color 0.3s, color 0.3s;
+      transition: background 0.3s, color 0.3s;
     }
 
-    .version {
+    .app {
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 16px 14px 28px;
+    }
+
+    .app-header,
+    .step-container,
+    .app-footer {
+      background: var(--container-bg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: 0 4px 16px var(--shadow-color);
+    }
+
+    .app-header {
+      padding: 14px 16px 12px;
+      margin-bottom: 14px;
+    }
+
+    .step-container {
       text-align: left;
-      font-size: 12px;
+      padding: 16px;
+      margin-bottom: 14px;
     }
 
-    h1,
-    h2 {
+    .app-footer {
+      padding: 12px 16px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--secondary-color);
+    }
+
+    .app-footer a {
       color: var(--primary-color);
-      margin-bottom: 10px;
-      font-size: 20px;
+      text-decoration: none;
+      margin-left: 8px;
+    }
+
+    .app-footer a:hover {
+      text-decoration: underline;
+    }
+
+    h1 {
+      flex: 1;
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-color);
+      line-height: 1.35;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-color);
     }
 
     label {
-      font-weight: bold;
-      margin-right: 5px;
+      font-weight: 600;
       color: var(--secondary-color);
       font-size: 14px;
     }
 
-    label.info {
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 28px;
+      text-align: center;
+    }
+
+    .step-hints {
+      margin: 0 0 14px;
+      padding: 10px 12px 10px 28px;
+      background: var(--status-bg);
+      border-radius: var(--radius-sm);
       font-size: 13px;
-      margin: 10px;
+      color: var(--secondary-color);
+      line-height: 1.55;
+    }
+
+    .step-hints li + li {
+      margin-top: 4px;
     }
 
     input,
     select,
     button {
-      padding: 3px;
-      margin: 3px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
+      font-family: inherit;
       font-size: 14px;
     }
 
     input,
     select {
-      min-width: 150px;
-      text-align: center;
+      padding: 10px 12px;
+      margin: 0;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
       color: var(--text-color);
-      background-color: var(--bg-color);
+      background-color: var(--input-bg);
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    button {
-      max-width: 200px;
-      background-color: var(--button-bg);
-      color: #fff;
+    input:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    select {
+      width: 100%;
+      max-width: 100%;
       cursor: pointer;
-      transition: background-color 0.3s;
+      line-height: 1.35;
+      min-height: 42px;
+      appearance: auto;
+      -webkit-appearance: menulist;
+      text-rendering: geometricPrecision;
+    }
+
+    select option {
+      line-height: 1.35;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      margin: 4px;
+      border-radius: var(--radius-sm);
       border: none;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
     }
 
-    button:disabled {
-      background-color: #ccc;
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--primary-color);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--input-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--status-bg);
+      border-color: var(--primary-color);
+    }
+
+    .btn-lg {
+      min-width: 200px;
+      padding: 12px 24px;
+      font-size: 15px;
+    }
+
+    button:disabled,
+    .btn:disabled {
+      opacity: 0.45;
       cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
     }
 
-    button:hover {
-      background-color: var(--button-hover);
+    .browser-notice:not([hidden]) {
+      display: block;
+      margin: 0 0 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: bold;
+      color: #b45309;
+      background-color: #fff7ed;
+      border: 1px solid #fdba74;
     }
 
-    button:disabled:hover {
-      background-color: #ccc;
-      cursor: not-allowed;
+    [data-theme="dark"] .browser-notice:not([hidden]) {
+      color: #fdba74;
+      background-color: #3d2a14;
+      border-color: #b45309;
     }
 
     #ble-support {
-      color: red;
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      color: #dc2626;
       font-weight: bold;
+      font-size: 13px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
     }
 
-    .container {
-      max-width: 550px;
-      margin: 0 auto;
-      background: var(--container-bg);
-      padding: 3px;
-      border-radius: 10px;
-      box-shadow: 0px 0px 10px var(--shadow-color);
+    [data-theme="dark"] #ble-support {
+      color: #fca5a5;
+      background: #3f1d1d;
+      border-color: #991b1b;
     }
 
-    .step-container {
-      text-align: left;
-      max-width: 550px;
-      margin: 5px auto;
-      background: var(--container-bg);
-      padding: 3px;
-      border-radius: 10px;
-      box-shadow: 0px 0px 10px var(--shadow-color);
+    #ble-support:empty {
+      display: none;
+      margin: 0;
+      padding: 0;
+      border: none;
     }
 
     .image-container {
-      border: 0.5px solid rgb(231, 231, 231);
-      max-width: 350px;
-      margin: 5px auto;
-      background: white;
-      padding: 3px;
-      border-radius: 15px;
-      box-shadow: 0px 0px 10px var(--shadow-color);
+      border: 1px solid var(--border-color);
+      max-width: 100%;
+      margin: 12px auto;
+      background: var(--input-bg);
+      padding: 12px;
+      border-radius: var(--radius-md);
     }
 
     .select-label {
-      margin: 10px 0;
-      text-align: center;
+      margin: 12px 0;
     }
 
     .send-image {
-      margin: 10px 0;
+      margin: 14px 0 8px;
       text-align: center;
     }
 
     canvas {
-      border: 1px solid rgb(204, 203, 203);
+      border: 1px solid var(--border-color);
       display: block;
-      margin: 10px auto;
+      margin: 0 auto;
+      border-radius: var(--radius-sm);
+      max-width: 100%;
+      touch-action: none;
     }
 
     .file-upload {
-      text-align: center;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .file-upload input[type="file"] {
+      width: 100%;
+      max-width: 280px;
+      font-size: 13px;
+      padding: 8px;
     }
 
     #pixelData {
@@ -166,139 +336,200 @@
     }
 
     .log-view {
-      margin: 10px 0;
-      text-align: center;
-      display: block;
+      margin-top: 14px;
     }
 
     #status {
       text-align: left;
-      padding: 10px;
-      border-radius: 5px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
       background-color: var(--status-bg);
+      border: 1px solid var(--border-color);
       color: var(--text-color);
-      font-size: 12px;
-      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      min-height: 1.5em;
+    }
+
+    #status:empty {
+      display: none;
     }
 
     #log {
       text-align: left;
-      padding: 10px;
-      border-radius: 5px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
       background-color: var(--status-bg);
-      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      color: var(--secondary-color);
       font-size: 12px;
-      margin-top: 10px;
-      height: 100px;
+      font-family: Consolas, 'Courier New', monospace;
+      line-height: 1.5;
+      margin-top: 8px;
+      height: 110px;
       overflow: auto;
     }
 
-    .pixlr-button {
-      display: inline-block;
-      margin-top: 10px;
-      padding: 10px 15px;
-      text-decoration: none;
-      border-radius: 5px;
-      transition: background-color 0.3s;
-      border: none;
-      font-size: 12px;
-      cursor: pointer;
+    #log:empty {
+      display: none;
     }
 
     .theme-container {
       display: flex;
-      /* justify-content: space-evenly; */
       align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
     }
 
     .theme-toggle {
-      max-width: 50px;
-      font-size: 24px;
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      font-size: 20px;
       cursor: pointer;
-      border: none;
-      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 50%;
+      background: var(--input-bg);
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .theme-toggle:hover {
+      background: var(--status-bg);
+      border-color: var(--primary-color);
     }
 
     .slider-container {
-      margin: 0 auto;
+      margin: 10px auto;
+      max-width: 420px;
       display: flex;
-      justify-content: space-around;
-      align-items: center;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px 12px;
+      background: var(--status-bg);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
     }
 
     .slider-container label {
-      font-size: 14px;
-      max-width: 150px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    .slider-container input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary-color);
+      cursor: pointer;
     }
 
     .mac-input {
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 2px;
-      margin: 10px 0;
+      gap: 4px;
+      margin: 12px 0;
+      padding: 14px;
+      background: var(--status-bg);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
     }
 
     .mac-dot {
-      font-weight: bold;
+      font-weight: 800;
       font-size: 18px;
       color: var(--secondary-color);
     }
 
     .mac-octet {
-      width: 40px;
+      width: 48px;
       min-width: 0;
-      padding: 5px 2px;
+      padding: 10px 4px;
       text-align: center;
-      font-size: 15px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
     }
 
     .mac-actions {
-      margin: 6px 0 10px;
+      text-align: center;
+      margin: 4px 0 10px;
     }
 
     .label-hint {
       font-size: 13px;
-      margin: 8px 12px;
-      color: var(--secondary-color);
+      margin: 8px 0;
+      padding: 8px 10px;
+      color: var(--primary-color);
+      background: var(--accent-soft);
+      border-radius: var(--radius-sm);
       min-height: 1.2em;
     }
 
+    .label-hint:empty {
+      display: none;
+      padding: 0;
+      margin: 0;
+    }
+
     .size-guide {
-      margin: 10px auto;
-      max-width: 520px;
+      margin-top: 12px;
       text-align: left;
       font-size: 13px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--status-bg);
     }
 
     .size-guide summary {
       cursor: pointer;
       color: var(--primary-color);
-      font-weight: bold;
-      margin-bottom: 6px;
+      font-weight: 700;
+      padding: 10px 12px;
+      list-style: none;
+    }
+
+    .size-guide summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .size-guide summary::before {
+      content: '▸ ';
+    }
+
+    .size-guide[open] summary::before {
+      content: '▾ ';
     }
 
     .size-guide table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 6px;
+      font-size: 12px;
     }
 
     .size-guide th,
     .size-guide td {
-      border: 1px solid #ccc;
-      padding: 4px 6px;
+      border-top: 1px solid var(--border-color);
+      padding: 8px 6px;
       text-align: center;
     }
 
-    [data-theme="dark"] .size-guide th,
-    [data-theme="dark"] .size-guide td {
-      border-color: #555;
+    .size-guide th {
+      background: var(--accent-soft);
+      font-weight: 700;
+      color: var(--text-color);
+    }
+
+    .size-guide tbody tr:nth-child(even) {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    [data-theme="dark"] .size-guide tbody tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.04);
     }
 
     .scan-button {
       font-size: 13px;
-      padding: 6px 14px;
     }
 
     .scanner-overlay {
@@ -317,16 +548,18 @@
 
     .scanner-panel {
       background: var(--container-bg);
-      border-radius: 12px;
-      padding: 16px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 18px;
       max-width: 90vw;
       width: 360px;
-      box-shadow: 0 4px 20px var(--shadow-color);
+      box-shadow: 0 8px 32px var(--shadow-color);
     }
 
     .scanner-panel h2 {
-      margin: 0 0 10px;
-      font-size: 16px;
+      margin: 0 0 12px;
+      font-size: 1rem;
+      color: var(--text-color);
     }
 
     .scanner-video-wrap {
@@ -420,50 +653,89 @@
     .progress-wrap {
       position: relative;
       display: none;
-      max-width: 300px;
-      height: 18px;
-      margin: 8px auto;
+      max-width: 320px;
+      height: 22px;
+      margin: 10px auto;
       background-color: var(--status-bg);
-      border-radius: 9px;
+      border: 1px solid var(--border-color);
+      border-radius: 11px;
       overflow: hidden;
     }
 
     .progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
       height: 100%;
       width: 0%;
-      background-color: var(--primary-color);
+      background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
       transition: width 0.2s ease;
     }
 
     .progress-text {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      line-height: 18px;
+      inset: 0;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 11px;
-      font-weight: bold;
+      font-weight: 800;
       color: var(--text-color);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    @media (max-width: 480px) {
+      .app {
+        padding: 10px 10px 20px;
+      }
+
+      .step-container,
+      .app-header {
+        padding: 14px 12px;
+      }
+
+      h1 {
+        font-size: 1.05rem;
+      }
+
+      .mac-octet {
+        width: 42px;
+        font-size: 15px;
+      }
+
+      .btn-lg {
+        width: 100%;
+        max-width: 280px;
+      }
     }
   </style>
 </head>
 
 <body data-theme="light">
-  <div class="container">
-    <!-- 테마 및 제목 영역 -->
-    <div class="theme-container">
-      <button class="theme-toggle" id="themeToggle">☀️</button>
-      <h1>전자 라벨 (Gicisky) Image Uploader</h1>
-    </div>
-    <div class="info">
-      <div id="ble-support"></div>
-    </div>
+  <main class="app">
+    <header class="app-header">
+      <div class="theme-container">
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="테마 전환">☀️</button>
+        <h1>전자 라벨 (Gicisky)<br>Image Uploader</h1>
+      </div>
+      <div class="info">
+        <label class="info browser-notice" id="browserNotice" hidden>⚠️ Chrome 브라우저가 아니면 정상 동작하지 않을 수 있습니다.</label>
+        <div id="ble-support"></div>
+      </div>
+    </header>
 
     <!-- 라벨 번호 + 타입 -->
-    <div class="step-container">
-      <label>1 단계 : 라벨 번호와 타입을 선택 하세요.</label><br>
-      <label class="info">- 화면 번호(예: 92.12.78.64)를 입력하면 이전에 맞춘 인치가 자동 선택됩니다.</label><br>
-      <label class="info">- 처음에는 아래 크기 안내로 골라 주세요. 업로드 성공 시 번호별로 기억합니다.</label>
+    <section class="step-container">
+      <div class="step-header">
+        <span class="step-num">1</span>
+        <h2 class="step-title">라벨 번호와 타입 선택</h2>
+      </div>
+      <ul class="step-hints">
+        <li>화면 번호(예: 92.12.78.64)를 입력하면 이전에 맞춘 인치가 자동 선택됩니다.</li>
+        <li>처음에는 아래 크기 안내로 골라 주세요. 업로드 성공 시 번호별로 기억합니다.</li>
+      </ul>
 
       <div class="mac-input">
         <input type="text" class="mac-octet" id="mac0" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
@@ -475,7 +747,7 @@
         <input type="text" class="mac-octet" id="mac3" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
       </div>
       <div class="mac-actions">
-        <button type="button" class="scan-button" id="scanBarcodeButton" disabled title="바코드 인식 개선 전까지 일시 중단">바코드 스캔</button>
+        <button type="button" class="btn btn-secondary scan-button" id="scanBarcodeButton" disabled title="바코드 인식 개선 전까지 일시 중단">바코드 스캔</button>
         <input type="file" id="barcodePhotoInput" accept="image/*" capture="environment">
       </div>
       <p class="label-hint" id="labelMacHint"></p>
@@ -510,28 +782,38 @@
           </tbody>
         </table>
       </details>
-    </div>
+    </section>
 
     <!-- 이미지 업로드 -->
-    <div class="step-container">
-      <label>2 단계 : 업로드 할 이미지를 선택 하세요.</label><br>
-      <label class="info">- 갤러리에서 고르거나 카메라로 바로 촬영할 수 있습니다.</label>
+    <section class="step-container">
+      <div class="step-header">
+        <span class="step-num">2</span>
+        <h2 class="step-title">이미지 선택</h2>
+      </div>
+      <ul class="step-hints">
+        <li>갤러리에서 고르거나 카메라로 바로 촬영할 수 있습니다.</li>
+      </ul>
       <div class="file-upload">
         <input type="file" id="imageUpload" accept="image/*">
-        <button type="button" id="imagePhotoButton">사진 촬영</button>
+        <button type="button" class="btn btn-secondary" id="imagePhotoButton">사진 촬영</button>
         <input type="file" id="imagePhotoInput" accept="image/*" capture="environment">
-        <button id="saveButton">저장하기</button>
+        <button type="button" class="btn btn-secondary" id="saveButton">저장하기</button>
       </div>
-    </div>
+    </section>
 
     <!--
       라벨 타입별 설정(가로/세로/회전/미러/압축 등)은 더 이상 숨김 input/checkbox로
       관리하지 않고, 아래 <script>의 LabelState 객체와 LABEL_CONFIG 맵으로 관리합니다.
     -->
 
-    <div class="step-container">
-      <label>3 단계 : 이미지의 크기 및 색상을 조절 하세요.</label><br>
-      <label class="info">- 이미지를 드래그 or 휠을 사용하여 조절 하세요.</label><br>
+    <section class="step-container">
+      <div class="step-header">
+        <span class="step-num">3</span>
+        <h2 class="step-title">크기 및 색상 조절</h2>
+      </div>
+      <ul class="step-hints">
+        <li>PC: 드래그·휠 확대/축소 · 스마트폰: 한 손가락 드래그, 두 손가락 핀치 확대/축소</li>
+      </ul>
       <!-- 캔버스 및 편집 버튼 -->
       <div class="image-container" id="myImage">
         <canvas id="myCanvas"></canvas>
@@ -545,18 +827,23 @@
         <label for="redSlider">빨강 임계값: <span id="redVal">170</span></label>
         <input type="range" id="redSlider" min="0" max="255" value="170">
       </div>
-    </div>
+    </section>
 
     <!-- 숨김 텍스트영역 (픽셀 데이터 저장) -->
     <textarea id="pixelData"></textarea>
 
     <!-- BLE 업로드 -->
-    <div class="step-container">
-      <label>4 단계 : 전자라벨에 연결하여 이미지를 업로드 하세요.</label><br>
-      <label class="info">- 1단계에서 입력한 번호로 블루투스 선택창이 필터됩니다. (미입력 시 전체 표시)</label>
+    <section class="step-container">
+      <div class="step-header">
+        <span class="step-num">4</span>
+        <h2 class="step-title">전자라벨에 업로드</h2>
+      </div>
+      <ul class="step-hints">
+        <li>1단계에서 입력한 번호로 블루투스 선택창이 필터됩니다. (미입력 시 전체 표시)</li>
+      </ul>
 
       <div class="send-image">
-        <button id="uploadButton">이미지 업로드</button>
+        <button type="button" class="btn btn-primary btn-lg" id="uploadButton">이미지 업로드</button>
       </div>
 
       <div class="progress-wrap" id="progressWrap">
@@ -569,16 +856,13 @@
         <div id="status"></div>
         <div id="log"></div>
       </div>
-    </div>
-    <div class="step-container">
-      <div class="version">
-        Version : 260605
-        <a href="https://github.com/eigger/eigger.github.io" target="_blank">GitHub (eigger)</a>
-      </div>
+    </section>
 
-    </div>
-
-  </div>
+    <footer class="app-footer">
+      Version 260605
+      <a href="https://github.com/eigger/eigger.github.io" target="_blank" rel="noopener">GitHub (eigger)</a>
+    </footer>
+  </main>
 
   <!-- 바코드 스캔 오버레이 -->
   <div class="scanner-overlay" id="scannerOverlay">
@@ -597,8 +881,8 @@
       </div>
       <p class="scanner-status" id="scannerStatus">카메라 준비 중...</p>
       <div class="scanner-buttons">
-        <button type="button" id="scannerPhotoButton">사진 촬영</button>
-        <button type="button" id="scannerCloseButton">닫기</button>
+        <button type="button" class="btn btn-secondary" id="scannerPhotoButton">사진 촬영</button>
+        <button type="button" class="btn btn-primary" id="scannerCloseButton">닫기</button>
       </div>
     </div>
   </div>
@@ -623,6 +907,7 @@
         body: document.body,
         themeToggle: $('themeToggle'),
         bleSupport: $('ble-support'),
+        browserNotice: $('browserNotice'),
         optionsSelect: $('optionsSelect'),
         labelSizeHint: $('labelSizeHint'),
         labelMacHint: $('labelMacHint'),
@@ -692,6 +977,7 @@
 
       const LabelMemory = {
         storageKey: 'gicisky-label-by-name',
+        lastMacKey: 'gicisky-last-mac',
         loadMap() {
           try {
             return JSON.parse(localStorage.getItem(this.storageKey)) || {};
@@ -711,6 +997,19 @@
           const target = MacInput.read();
           if (!target.valid) return;
           this.save(target.name, dom.optionsSelect.value);
+        },
+        rememberLastMac() {
+          const target = MacInput.read();
+          if (!target.valid) return;
+          localStorage.setItem(this.lastMacKey, target.octets.join('.'));
+        },
+        tryApplyLastMac() {
+          try {
+            const saved = localStorage.getItem(this.lastMacKey);
+            if (!saved) return;
+            if (dom.macOctets.some((el) => el.value.trim() !== '')) return;
+            MacInput.applyBarcode(saved);
+          } catch (e) { /* ignore */ }
         },
         tryApplyForMac() {
           const target = MacInput.read();
@@ -1110,6 +1409,22 @@
         }
       };
 
+      /* ──────────── 브라우저 안내 ──────────── */
+      const BrowserSupport = {
+        isChrome() {
+          const brands = navigator.userAgentData?.brands;
+          if (brands) {
+            return brands.some((b) => b.brand === 'Google Chrome');
+          }
+          const ua = navigator.userAgent;
+          return /CriOS/.test(ua) || (/Chrome/.test(ua) && !/Edg|OPR|SamsungBrowser/.test(ua));
+        },
+        updateNotice() {
+          if (!dom.browserNotice) return;
+          dom.browserNotice.hidden = this.isChrome();
+        },
+      };
+
       /* ──────────── BLE 관리 (필요 시) ──────────── */
       const BLEManager = {
         bleDevice: null,
@@ -1125,7 +1440,7 @@
         serviceUuid: 0,
         checkSupport() {
           if (!navigator.bluetooth) {
-            dom.bleSupport.innerHTML = "해당 브라우저는 Web Bluetooth를 지원하지 않습니다.<br>PC Chrome 브라우저 에서 시도하세요";
+            dom.bleSupport.innerHTML = "해당 브라우저는 Web Bluetooth를 지원하지 않습니다.<br>Chrome 브라우저에서 시도하세요";
             dom.uploadButton.disabled = true;
           }
         },
@@ -1196,6 +1511,7 @@
                 setStatus("이미지 업로드 완료");
                 setProgress(100);
                 LabelMemory.rememberCurrent();
+                LabelMemory.rememberLastMac();
                 if (this.gattServer && this.gattServer.connected) {
                   if (this.bleDevice && this.bleDevice.gatt.connected)
                     this.bleDevice.gatt.disconnect();
@@ -1243,11 +1559,12 @@
         initiateConnection() {
           dom.log.innerHTML = '';
           dom.uploadButton.disabled = true;
-          setProgress(null);
+          setProgress(0);
           setStatus("라벨 선택중...");
           if (this.gattServer && this.gattServer.connected) {
             if (this.bleDevice && this.bleDevice.gatt.connected) this.bleDevice.gatt.disconnect();
             dom.uploadButton.disabled = false;
+            setProgress(null);
           } else {
             this.reconnectAttempts = 0;
             const target = MacInput.read();
@@ -1345,6 +1662,7 @@
       function handleBLEError(error) {
         console.error(error);
         setStatus("에러 : " + error);
+        setProgress(null);
         BLEManager.disconnect();
         if (BLEManager.bleDevice && BLEManager.bleDevice.gatt.connected) {
           BLEManager.bleDevice.gatt.disconnect();
@@ -1847,16 +2165,55 @@
       // 페이지 로드 시 초기화
       window.onload = function () {
         ThemeManager.syncIcon();
+        LabelMemory.tryApplyLastMac();
         LabelManager.updateParameters();
         LabelSizeGuide.updateHint();
+        BrowserSupport.updateNotice();
         BLEManager.checkSupport();
       };
 
-      // ────────── 캔버스 드래그, 커서 변경 및 확대/축소 기능 추가 ──────────
+      // ────────── 캔버스 드래그, 커서 변경 및 확대/축소 (마우스 + 터치) ──────────
       (function () {
         const canvas = CanvasManager.canvas;
         let isDragging = false;
         let startX, startY;
+        let lastPinchDist = null;
+
+        function getCanvasPoint(clientX, clientY) {
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY,
+          };
+        }
+
+        function applyZoomAtPoint(canvasX, canvasY, newScale) {
+          if (!CanvasManager.image) return;
+          const oldScale = CanvasManager.scale;
+          const imageX = (canvasX - CanvasManager.offsetX) / oldScale;
+          const imageY = (canvasY - CanvasManager.offsetY) / oldScale;
+          CanvasManager.scale = newScale;
+          CanvasManager.newW = CanvasManager.image.width * newScale;
+          CanvasManager.newH = CanvasManager.image.height * newScale;
+          CanvasManager.offsetX = canvasX - imageX * newScale;
+          CanvasManager.offsetY = canvasY - imageY * newScale;
+          CanvasManager.render();
+        }
+
+        function getPinchDistance(touches) {
+          const dx = touches[0].clientX - touches[1].clientX;
+          const dy = touches[0].clientY - touches[1].clientY;
+          return Math.hypot(dx, dy);
+        }
+
+        function getPinchCenter(touches) {
+          return {
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2,
+          };
+        }
 
         // 마우스 오버 시 이동 가능한 커서로 변경
         canvas.addEventListener('mouseenter', () => {
@@ -1868,24 +2225,21 @@
         });
 
         canvas.addEventListener('mousedown', (e) => {
+          if (!CanvasManager.image) return;
           isDragging = true;
-          startX = e.offsetX;
-          startY = e.offsetY;
+          const pt = getCanvasPoint(e.clientX, e.clientY);
+          startX = pt.x;
+          startY = pt.y;
           canvas.style.cursor = "grabbing";
         });
 
         canvas.addEventListener('mousemove', (e) => {
-          if (!isDragging) return;
-          // 드래그한 거리 계산
-          const dx = e.offsetX - startX;
-          const dy = e.offsetY - startY;
-          // CanvasManager의 오프셋 업데이트
-          CanvasManager.offsetX += dx;
-          CanvasManager.offsetY += dy;
-          // 시작 좌표 갱신
-          startX = e.offsetX;
-          startY = e.offsetY;
-          // 새 오프셋에 맞게 다시 렌더링
+          if (!isDragging || !CanvasManager.image) return;
+          const pt = getCanvasPoint(e.clientX, e.clientY);
+          CanvasManager.offsetX += pt.x - startX;
+          CanvasManager.offsetY += pt.y - startY;
+          startX = pt.x;
+          startY = pt.y;
           CanvasManager.render();
         });
 
@@ -1894,32 +2248,64 @@
           canvas.style.cursor = "grab";
         });
 
-        // 마우스 휠 이벤트: 확대/축소
         canvas.addEventListener('wheel', (e) => {
+          if (!CanvasManager.image) return;
           e.preventDefault();
           const zoomFactor = 1.1;
-          const oldScale = CanvasManager.scale;
-          let newScale;
-          if (e.deltaY < 0) {  // 확대
-            newScale = oldScale * zoomFactor;
-          } else {             // 축소
-            newScale = oldScale / zoomFactor;
+          const newScale = e.deltaY < 0
+            ? CanvasManager.scale * zoomFactor
+            : CanvasManager.scale / zoomFactor;
+          const pt = getCanvasPoint(e.clientX, e.clientY);
+          applyZoomAtPoint(pt.x, pt.y, newScale);
+        }, { passive: false });
+
+        canvas.addEventListener('touchstart', (e) => {
+          if (!CanvasManager.image) return;
+          if (e.touches.length === 1) {
+            isDragging = true;
+            lastPinchDist = null;
+            const pt = getCanvasPoint(e.touches[0].clientX, e.touches[0].clientY);
+            startX = pt.x;
+            startY = pt.y;
+          } else if (e.touches.length === 2) {
+            isDragging = false;
+            lastPinchDist = getPinchDistance(e.touches);
           }
-          // 현재 마우스 좌표를 기준으로 확대/축소
-          const rect = canvas.getBoundingClientRect();
-          const mouseX = e.clientX - rect.left;
-          const mouseY = e.clientY - rect.top;
-          // 이미지 상의 좌표 (기존 스케일 기준)
-          const imageX = (mouseX - CanvasManager.offsetX) / oldScale;
-          const imageY = (mouseY - CanvasManager.offsetY) / oldScale;
-          // 새로운 스케일 적용
-          CanvasManager.scale = newScale;
-          CanvasManager.newW = CanvasManager.image.width * newScale;
-          CanvasManager.newH = CanvasManager.image.height * newScale;
-          // 마우스 위치가 이미지 내 동일 위치가 되도록 오프셋 보정
-          CanvasManager.offsetX = mouseX - imageX * newScale;
-          CanvasManager.offsetY = mouseY - imageY * newScale;
-          CanvasManager.render();
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+          if (!CanvasManager.image) return;
+          e.preventDefault();
+          if (e.touches.length === 1 && isDragging) {
+            const pt = getCanvasPoint(e.touches[0].clientX, e.touches[0].clientY);
+            CanvasManager.offsetX += pt.x - startX;
+            CanvasManager.offsetY += pt.y - startY;
+            startX = pt.x;
+            startY = pt.y;
+            CanvasManager.render();
+          } else if (e.touches.length === 2 && lastPinchDist !== null) {
+            const dist = getPinchDistance(e.touches);
+            const scaleFactor = dist / lastPinchDist;
+            const center = getPinchCenter(e.touches);
+            const pt = getCanvasPoint(center.x, center.y);
+            applyZoomAtPoint(pt.x, pt.y, CanvasManager.scale * scaleFactor);
+            lastPinchDist = dist;
+          }
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', (e) => {
+          if (e.touches.length === 0) {
+            isDragging = false;
+            lastPinchDist = null;
+          } else if (e.touches.length === 1) {
+            isDragging = true;
+            lastPinchDist = null;
+            const pt = getCanvasPoint(e.touches[0].clientX, e.touches[0].clientY);
+            startX = pt.x;
+            startY = pt.y;
+          } else if (e.touches.length === 2) {
+            lastPinchDist = getPinchDistance(e.touches);
+          }
         });
       })();
     })();
