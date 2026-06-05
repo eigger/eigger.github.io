@@ -257,6 +257,45 @@
       margin: 6px 0 10px;
     }
 
+    .label-hint {
+      font-size: 13px;
+      margin: 8px 12px;
+      color: var(--secondary-color);
+      min-height: 1.2em;
+    }
+
+    .size-guide {
+      margin: 10px auto;
+      max-width: 520px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .size-guide summary {
+      cursor: pointer;
+      color: var(--primary-color);
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    .size-guide table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+    }
+
+    .size-guide th,
+    .size-guide td {
+      border: 1px solid #ccc;
+      padding: 4px 6px;
+      text-align: center;
+    }
+
+    [data-theme="dark"] .size-guide th,
+    [data-theme="dark"] .size-guide td {
+      border-color: #555;
+    }
+
     .scan-button {
       font-size: 13px;
       padding: 6px 14px;
@@ -373,7 +412,8 @@
       max-width: none;
     }
 
-    #barcodePhotoInput {
+    #barcodePhotoInput,
+    #imagePhotoInput {
       display: none;
     }
 
@@ -419,28 +459,67 @@
       <div id="ble-support"></div>
     </div>
 
-    <!-- 라벨 타입 선택 (항상 보임) -->
+    <!-- 라벨 번호 + 타입 -->
     <div class="step-container">
-      <label>1 단계 : 라벨 타입을 선택 하세요.</label>
+      <label>1 단계 : 라벨 번호와 타입을 선택 하세요.</label><br>
+      <label class="info">- 화면 번호(예: 92.12.78.64)를 입력하면 이전에 맞춘 인치가 자동 선택됩니다.</label><br>
+      <label class="info">- 처음에는 아래 크기 안내로 골라 주세요. 업로드 성공 시 번호별로 기억합니다.</label>
+
+      <div class="mac-input">
+        <input type="text" class="mac-octet" id="mac0" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+        <span class="mac-dot">.</span>
+        <input type="text" class="mac-octet" id="mac1" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+        <span class="mac-dot">.</span>
+        <input type="text" class="mac-octet" id="mac2" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+        <span class="mac-dot">.</span>
+        <input type="text" class="mac-octet" id="mac3" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+      </div>
+      <div class="mac-actions">
+        <button type="button" class="scan-button" id="scanBarcodeButton" disabled title="바코드 인식 개선 전까지 일시 중단">바코드 스캔</button>
+        <input type="file" id="barcodePhotoInput" accept="image/*" capture="environment">
+      </div>
+      <p class="label-hint" id="labelMacHint"></p>
+
       <div class="select-label">
         <select id="optionsSelect">
-          <option value="0B">2.1인치 (250x122) 검정 & 흰색 & 빨강</option>
-          <option value="33">2.9인치 (296x128) 검정 & 흰색 & 빨강</option>
-          <option value="22B">3.7인치 (240x416) 검정 & 흰색 & 빨강</option>
-          <option value="4B">4.2인치 (400x300) 검정 & 흰색 & 빨강</option>
-          <option value="2B">7.5인치 (800x480) 검정 & 흰색 & 빨강</option>
-          <option value="8B">10.2인치 (960x640) 검정 & 흰색 & 빨강</option>
-          <option value="A0">2.1인치 (250x132) 검정</option>
+          <option value="0B">2.1인치 — 가로형 소형 (약 6×3cm) · 흑백빨강</option>
+          <option value="33">2.9인치 — 가로형 (약 7×3cm, 2.1보다 넓음) · 흑백빨강</option>
+          <option value="22B">3.7인치 — 세로형 길쭉 (약 5×10cm) · 흑백빨강</option>
+          <option value="4B">4.2인치 — 거의 정사각 (약 10×7cm) · 흑백빨강</option>
+          <option value="2B">7.5인치 — 대형 가로 (약 16×10cm) · 흑백빨강</option>
+          <option value="8B">10.2인치 — 초대형 (약 19×13cm) · 흑백빨강</option>
+          <option value="A0">2.1인치 TFT — 가로형 (약 6×3cm) · 흑백만</option>
         </select>
       </div>
+      <p class="label-hint" id="labelSizeHint"></p>
+
+      <details class="size-guide">
+        <summary>인치 구분이 어려울 때 — 모양으로 고르기</summary>
+        <table>
+          <thead>
+            <tr><th>인치</th><th>모양</th><th>대략 크기</th><th>색</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>2.1</td><td>가로로 긴 작은 라벨</td><td>신용카드 절반 높이</td><td>흑백빨강</td></tr>
+            <tr><td>2.9</td><td>가로로 긴 라벨 (2.1보다 넓음)</td><td>신용카드와 비슷한 폭</td><td>흑백빨강</td></tr>
+            <tr><td>3.7</td><td>세로로 긴 라벨</td><td>스마트폰 폭, 세로로 김</td><td>흑백빨강</td></tr>
+            <tr><td>4.2</td><td>넓은 직사각 (거의 정사각)</td><td>포스트잇보다 큼</td><td>흑백빨강</td></tr>
+            <tr><td>7.5</td><td>대형 가로 라벨</td><td>태블릿 1/2 정도</td><td>흑백빨강</td></tr>
+            <tr><td>10.2</td><td>초대형 가로 라벨</td><td>작은 태블릿급</td><td>흑백빨강</td></tr>
+            <tr><td>2.1 TFT</td><td>가로형 (TFT)</td><td>2.1과 비슷, 빨강 없음</td><td>흑백만</td></tr>
+          </tbody>
+        </table>
+      </details>
     </div>
 
     <!-- 이미지 업로드 -->
     <div class="step-container">
-      <label>2 단계 : 업로드 할 이미지를 선택 하세요.</label>
+      <label>2 단계 : 업로드 할 이미지를 선택 하세요.</label><br>
+      <label class="info">- 갤러리에서 고르거나 카메라로 바로 촬영할 수 있습니다.</label>
       <div class="file-upload">
         <input type="file" id="imageUpload" accept="image/*">
-        <!-- <button class="pixlr-button" id="pixlrButton">웹 이미지 에디터 (필요시)</button> -->
+        <button type="button" id="imagePhotoButton">사진 촬영</button>
+        <input type="file" id="imagePhotoInput" accept="image/*" capture="environment">
         <button id="saveButton">저장하기</button>
       </div>
     </div>
@@ -471,26 +550,10 @@
     <!-- 숨김 텍스트영역 (픽셀 데이터 저장) -->
     <textarea id="pixelData"></textarea>
 
-    <!-- BLE 업로드 섹션 (필요 시) -->
+    <!-- BLE 업로드 -->
     <div class="step-container">
       <label>4 단계 : 전자라벨에 연결하여 이미지를 업로드 하세요.</label><br>
-      <label class="info">- 전자라벨 화면의 번호(예: 92.12.78.64)를 입력하세요.</label><br>
-      <label class="info">- 입력한 라벨만 블루투스 선택창에 표시됩니다.</label><br>
-      <label class="info">- 미입력 시 주변의 모든 전자라벨이 표시됩니다.</label>
-
-      <div class="mac-input">
-        <input type="text" class="mac-octet" id="mac0" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
-        <span class="mac-dot">.</span>
-        <input type="text" class="mac-octet" id="mac1" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
-        <span class="mac-dot">.</span>
-        <input type="text" class="mac-octet" id="mac2" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
-        <span class="mac-dot">.</span>
-        <input type="text" class="mac-octet" id="mac3" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
-      </div>
-      <div class="mac-actions">
-        <button type="button" class="scan-button" id="scanBarcodeButton" disabled title="바코드 인식 개선 전까지 일시 중단">바코드 스캔</button>
-        <input type="file" id="barcodePhotoInput" accept="image/*" capture="environment">
-      </div>
+      <label class="info">- 1단계에서 입력한 번호로 블루투스 선택창이 필터됩니다. (미입력 시 전체 표시)</label>
 
       <div class="send-image">
         <button id="uploadButton">이미지 업로드</button>
@@ -509,7 +572,7 @@
     </div>
     <div class="step-container">
       <div class="version">
-        Version : 260605
+        Version : 260610
         <a href="https://github.com/eigger/eigger.github.io" target="_blank">GitHub (eigger)</a>
       </div>
 
@@ -561,7 +624,11 @@
         themeToggle: $('themeToggle'),
         bleSupport: $('ble-support'),
         optionsSelect: $('optionsSelect'),
+        labelSizeHint: $('labelSizeHint'),
+        labelMacHint: $('labelMacHint'),
         imageUpload: $('imageUpload'),
+        imagePhotoButton: $('imagePhotoButton'),
+        imagePhotoInput: $('imagePhotoInput'),
         saveButton: $('saveButton'),
         uploadButton: $('uploadButton'),
         imageBox: $('myImage'),
@@ -611,6 +678,67 @@
         0x2B: { width: 800, height: 480, maxWidth: '530px', rotation: true, mirror: true, compression: true, invertLuminance: true },
         0x8B: { width: 960, height: 640, maxWidth: '550px', rotation: true, compression: true },
         0x22B: { width: 240, height: 416, maxWidth: '450px', rotation: true, mirror: true, compression: true },
+      };
+
+      const LABEL_SIZE_GUIDE = {
+        '0B': { inch: '2.1', shape: '가로형 소형', cm: '약 6×3cm', colors: '흑백빨강' },
+        '33': { inch: '2.9', shape: '가로형 (2.1보다 넓음)', cm: '약 7×3cm', colors: '흑백빨강' },
+        '22B': { inch: '3.7', shape: '세로형 길쭉', cm: '약 5×10cm', colors: '흑백빨강' },
+        '4B': { inch: '4.2', shape: '거의 정사각', cm: '약 10×7cm', colors: '흑백빨강' },
+        '2B': { inch: '7.5', shape: '대형 가로', cm: '약 16×10cm', colors: '흑백빨강' },
+        '8B': { inch: '10.2', shape: '초대형 가로', cm: '약 19×13cm', colors: '흑백빨강' },
+        'A0': { inch: '2.1 TFT', shape: '가로형 (TFT)', cm: '약 6×3cm', colors: '흑백만' },
+      };
+
+      const LabelMemory = {
+        storageKey: 'gicisky-label-by-name',
+        loadMap() {
+          try {
+            return JSON.parse(localStorage.getItem(this.storageKey)) || {};
+          } catch (e) {
+            return {};
+          }
+        },
+        save(name, option) {
+          const map = this.loadMap();
+          map[name] = option;
+          localStorage.setItem(this.storageKey, JSON.stringify(map));
+        },
+        get(name) {
+          return this.loadMap()[name] || null;
+        },
+        rememberCurrent() {
+          const target = MacInput.read();
+          if (!target.valid) return;
+          this.save(target.name, dom.optionsSelect.value);
+        },
+        tryApplyForMac() {
+          const target = MacInput.read();
+          if (!target.valid) {
+            MacInput.setMacHint('');
+            return false;
+          }
+          const saved = this.get(target.name);
+          if (!saved || !dom.optionsSelect.querySelector(`option[value="${saved}"]`)) {
+            MacInput.setMacHint('이 라벨은 처음 사용합니다. 아래에서 인치를 선택해 주세요.');
+            return false;
+          }
+          dom.optionsSelect.value = saved;
+          LabelManager.updateParameters();
+          LabelSizeGuide.updateHint();
+          const g = LABEL_SIZE_GUIDE[saved];
+          MacInput.setMacHint(`저장된 설정: ${g.inch}인치 (${g.shape}) — 틀리면 목록에서 변경하세요.`);
+          return true;
+        },
+      };
+
+      const LabelSizeGuide = {
+        updateHint() {
+          const g = LABEL_SIZE_GUIDE[dom.optionsSelect.value];
+          dom.labelSizeHint.textContent = g
+            ? `선택됨: ${g.inch}인치 · ${g.shape} · ${g.cm} · ${g.colors}`
+            : '';
+        },
       };
 
       /* ──────────── 유틸리티 함수 ──────────── */
@@ -665,6 +793,7 @@
         offsetY: 0,
         initCanvas() {
           dom.imageUpload.value = '';
+          dom.imagePhotoInput.value = '';
           dom.saveButton.disabled = true;
           this.originalImageData = null;
           this.image = null;
@@ -1066,6 +1195,7 @@
                 addLog("이미지 업로드 완료");
                 setStatus("이미지 업로드 완료");
                 setProgress(100);
+                LabelMemory.rememberCurrent();
                 if (this.gattServer && this.gattServer.connected) {
                   if (this.bleDevice && this.bleDevice.gatt.connected)
                     this.bleDevice.gatt.disconnect();
@@ -1120,10 +1250,6 @@
             dom.uploadButton.disabled = false;
           } else {
             this.reconnectAttempts = 0;
-
-            // 입력된 라벨 번호가 있으면 해당 기기 이름(NEMRxxyyzzkk)으로 필터링하여
-            // 블루투스 선택창에 그 라벨만 표시되게 한다.
-            // (Web Bluetooth는 보안상 MAC으로 직접 연결할 수 없고 선택창도 생략 불가)
             const target = MacInput.read();
             let requestOptions;
             if (target.valid) {
@@ -1138,7 +1264,6 @@
                 optionalServices: [0xFEF0, 0xFDF0]
               };
             }
-
             navigator.bluetooth.requestDevice(requestOptions).then(device => {
               setStatus("연결중 : " + device.name);
               device.addEventListener('gattserverdisconnected', () => this.disconnect());
@@ -1272,7 +1397,18 @@
           const octets = this.parseBarcode(text);
           if (!octets) return false;
           this.fillOctets(octets);
+          this.onMacChanged();
           return true;
+        },
+        setMacHint(text) {
+          dom.labelMacHint.textContent = text || '';
+        },
+        onMacChanged() {
+          if (this.read().valid) {
+            LabelMemory.tryApplyForMac();
+          } else {
+            this.setMacHint('');
+          }
         },
         // 16진수만 허용하고, 두 자리 입력 시 다음 칸으로 자동 이동시킨다.
         setupAutoAdvance() {
@@ -1282,6 +1418,7 @@
               if (el.value.length >= 2 && idx < dom.macOctets.length - 1) {
                 dom.macOctets[idx + 1].focus();
               }
+              this.onMacChanged();
             });
             el.addEventListener('keydown', (e) => {
               if (e.key === 'Backspace' && el.value === '' && idx > 0) {
@@ -1663,20 +1800,33 @@
       dom.themeToggle.addEventListener('click', ThemeManager.toggleTheme);
       dom.optionsSelect.addEventListener('change', () => {
         LabelManager.updateParameters();
-      });
-      dom.imageUpload.addEventListener('change', function () {
-        const file = this.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = function (e) {
-            const img = new Image();
-            img.onload = function () {
-              CanvasManager.drawImage(img);
-            };
-            img.src = e.target.result;
-          };
-          reader.readAsDataURL(file);
+        LabelSizeGuide.updateHint();
+        if (MacInput.read().valid) {
+          LabelMemory.rememberCurrent();
+          const g = LABEL_SIZE_GUIDE[dom.optionsSelect.value];
+          MacInput.setMacHint(g ? `이 라벨에 ${g.inch}인치로 저장했습니다.` : '');
         }
+      });
+      function loadImageFromFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img = new Image();
+          img.onload = function () {
+            CanvasManager.drawImage(img);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+      dom.imageUpload.addEventListener('change', function () {
+        loadImageFromFile(this.files[0]);
+      });
+      dom.imagePhotoButton.addEventListener('click', () => {
+        dom.imagePhotoInput.click();
+      });
+      dom.imagePhotoInput.addEventListener('change', function () {
+        loadImageFromFile(this.files[0]);
       });
       // 슬라이더 이동 시 실시간 결과 갱신
       dom.luminanceSlider.addEventListener('input', function () {
@@ -1698,6 +1848,7 @@
       window.onload = function () {
         ThemeManager.syncIcon();
         LabelManager.updateParameters();
+        LabelSizeGuide.updateHint();
         BLEManager.checkSupport();
       };
 
