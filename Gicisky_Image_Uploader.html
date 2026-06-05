@@ -474,8 +474,7 @@
     <!-- BLE 업로드 섹션 (필요 시) -->
     <div class="step-container">
       <label>4 단계 : 전자라벨에 연결하여 이미지를 업로드 하세요.</label><br>
-      <label class="info">- 전자라벨 화면/바코드의 번호(예: 92.12.78.64)를 입력하거나 스캔하세요.</label><br>
-      <label class="info">- 스캔 시 바코드를 가이드 안에 맞추고, 이진화 미리보기에서 임계값을 조절하세요.</label><br>
+      <label class="info">- 전자라벨 화면의 번호(예: 92.12.78.64)를 입력하세요.</label><br>
       <label class="info">- 입력한 라벨만 블루투스 선택창에 표시됩니다.</label><br>
       <label class="info">- 미입력 시 주변의 모든 전자라벨이 표시됩니다.</label>
 
@@ -489,7 +488,7 @@
         <input type="text" class="mac-octet" id="mac3" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
       </div>
       <div class="mac-actions">
-        <button type="button" class="scan-button" id="scanBarcodeButton">바코드 스캔</button>
+        <button type="button" class="scan-button" id="scanBarcodeButton" disabled title="바코드 인식 개선 전까지 일시 중단">바코드 스캔</button>
         <input type="file" id="barcodePhotoInput" accept="image/*" capture="environment">
       </div>
 
