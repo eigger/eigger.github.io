@@ -434,7 +434,7 @@
     <div class="step-container">
       <label>4 단계 : 전자라벨에 연결하여 이미지를 업로드 하세요.</label><br>
       <label class="info">- 전자라벨 화면/바코드의 번호(예: 92.12.78.64)를 입력하거나 스캔하세요.</label><br>
-      <label class="info">- 스캔 시 바코드 또는 라벨 하단 숫자(94.20.50.87)를 인식합니다.</label><br>
+      <label class="info">- 스캔 시 라벨 하단 숫자(94.20.50.87)를 가이드 안에 맞추면 OCR로 인식합니다.</label><br>
       <label class="info">- 입력한 라벨만 블루투스 선택창에 표시됩니다.</label><br>
       <label class="info">- 미입력 시 주변의 모든 전자라벨이 표시됩니다.</label>
 
@@ -1217,9 +1217,20 @@
         },
         // OCR 결과에서 xx.xx.xx.xx 패턴 추출 (전자라벨 하단 숫자)
         parseFromOcr(text) {
-          const m = text.match(/(\d{1,2})\s*[.,:;\s]\s*(\d{1,2})\s*[.,:;\s]\s*(\d{1,2})\s*[.,:;\s]\s*(\d{1,2})/);
-          if (!m) return null;
-          return this.parseBarcode(`${m[1]}.${m[2]}.${m[3]}.${m[4]}`);
+          const fixed = text
+            .replace(/[Oo]/g, '0')
+            .replace(/[Il|]/g, '1')
+            .replace(/[Ss]/g, '5')
+            .replace(/[Bb]/g, '8');
+
+          let m = fixed.match(/(\d{1,2})\s*[.,:;\s-]\s*(\d{1,2})\s*[.,:;\s-]\s*(\d{1,2})\s*[.,:;\s-]\s*(\d{1,2})/);
+          if (m) return this.parseBarcode(`${m[1]}.${m[2]}.${m[3]}.${m[4]}`);
+
+          const digits = fixed.replace(/[^0-9]/g, '');
+          if (digits.length >= 8) {
+            return this.parseBarcode(digits.slice(-8));
+          }
+          return null;
         },
         fillOctets(octets) {
           octets.forEach((val, i) => { dom.macOctets[i].value = val; });
@@ -1259,7 +1270,10 @@
         timerId: null,
         ocrBusy: false,
         ocrWorker: null,
+        ocrReady: false,
         lastOcrAt: 0,
+        lastOcrHint: '',
+        frameCount: 0,
 
         getHints() {
           const hints = new Map();
@@ -1343,19 +1357,75 @@
           canvas.getContext('2d').drawImage(src, x, y, w, h, 0, 0, w, h);
           return canvas;
         },
-        // 전자라벨: 바코드/번호는 화면 하단에 위치
+        // ZXing용: 바코드 줄 영역
         getScanRegions(src, fast = false) {
           if (fast) {
             return [
-              this.cropCanvas(src, { x: 0.1, y: 0.72, w: 0.8, h: 0.25 }),
-              this.cropCanvas(src, { x: 0.15, y: 0.8, w: 0.7, h: 0.18 }),
+              this.cropCanvas(src, { x: 0.1, y: 0.55, w: 0.8, h: 0.35 }),
+              this.cropCanvas(src, { x: 0.15, y: 0.65, w: 0.7, h: 0.28 }),
             ];
           }
           return [
-            this.cropCanvas(src, { x: 0.05, y: 0.55, w: 0.9, h: 0.4 }),
-            this.cropCanvas(src, { x: 0.1, y: 0.72, w: 0.8, h: 0.25 }),
-            this.cropCanvas(src, { x: 0.15, y: 0.8, w: 0.7, h: 0.18 }),
+            this.cropCanvas(src, { x: 0.05, y: 0.45, w: 0.9, h: 0.45 }),
+            this.cropCanvas(src, { x: 0.1, y: 0.55, w: 0.8, h: 0.35 }),
+            this.cropCanvas(src, { x: 0.15, y: 0.65, w: 0.7, h: 0.28 }),
           ];
+        },
+        // OCR용: 라벨 하단 숫자(94.20.50.87) — 폰 카메라는 라벨 전체가 중앙에 오므로 y를 올림
+        getOcrRegions(src) {
+          return [
+            this.cropCanvas(src, { x: 0.12, y: 0.58, w: 0.76, h: 0.28 }),
+            this.cropCanvas(src, { x: 0.15, y: 0.68, w: 0.7, h: 0.2 }),
+            this.cropCanvas(src, { x: 0.18, y: 0.74, w: 0.64, h: 0.14 }),
+            this.cropCanvas(src, { x: 0.05, y: 0.4, w: 0.9, h: 0.5 }),
+          ];
+        },
+        // OCR 전용 이진화(전자잉크 떨림 제거) — CSS filter보다 안정적
+        makeBinaryCanvas(src, scale, threshold) {
+          const sw = src.width || src.naturalWidth;
+          const sh = src.height || src.naturalHeight;
+          const maxDim = 960;
+          const fitScale = Math.min(scale, maxDim / Math.max(sw, sh));
+          const w = Math.max(1, Math.round(sw * fitScale));
+          const h = Math.max(1, Math.round(sh * fitScale));
+          const tmp = document.createElement('canvas');
+          tmp.width = w;
+          tmp.height = h;
+          const tctx = tmp.getContext('2d');
+          tctx.drawImage(src, 0, 0, w, h);
+          const imageData = tctx.getImageData(0, 0, w, h);
+          const data = imageData.data;
+          for (let i = 0; i < data.length; i += 4) {
+            const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            const v = lum < threshold ? 0 : 255;
+            data[i] = data[i + 1] = data[i + 2] = v;
+            data[i + 3] = 255;
+          }
+          tctx.putImageData(imageData, 0, 0);
+          return tmp;
+        },
+        buildOcrAttempts(src) {
+          const attempts = [];
+          const thresholds = [110, 130, 150, 170];
+          const scales = [3, 4, 5, 6];
+          for (const region of this.getOcrRegions(src)) {
+            for (const scale of scales) {
+              for (const threshold of thresholds) {
+                attempts.push(this.makeBinaryCanvas(region, scale, threshold));
+              }
+            }
+          }
+          return attempts;
+        },
+        buildOcrAttemptsLive(src) {
+          const attempts = [];
+          const regions = this.getOcrRegions(src).slice(0, 3);
+          for (const region of regions) {
+            attempts.push(this.makeBinaryCanvas(region, 5, 130));
+            attempts.push(this.makeBinaryCanvas(region, 6, 150));
+            attempts.push(this.makeBinaryCanvas(region, 4, 110));
+          }
+          return attempts;
         },
         buildVariants(src, fast = false) {
           const variants = [];
@@ -1393,13 +1463,27 @@
         },
         async getOcrWorker() {
           if (!this.ocrWorker) {
-            this.ocrWorker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
+            this.ocrWorker = await Tesseract.createWorker('eng', 1, {
+              logger: (m) => {
+                if (m.status === 'loading tesseract core' || m.status === 'initializing tesseract') {
+                  this.setStatus('인식 엔진 로딩 중...');
+                }
+              },
+            });
             await this.ocrWorker.setParameters({
               tessedit_char_whitelist: '0123456789.',
               tessedit_pageseg_mode: '7',
             });
+            this.ocrReady = true;
           }
           return this.ocrWorker;
+        },
+        async recognizeNumber(worker, canvas) {
+          const { data: { text } } = await worker.recognize(canvas);
+          const trimmed = text.replace(/\s+/g, ' ').trim();
+          if (trimmed) this.lastOcrHint = trimmed.slice(0, 40);
+          const octets = MacInput.parseFromOcr(text);
+          return octets ? { octets, text: trimmed } : null;
         },
         async tryZxing(source, fast = false) {
           const regions = this.getScanRegions(source, fast);
@@ -1415,24 +1499,21 @@
           }
           return false;
         },
-        async tryOcr(source, fast = false) {
+        async tryOcr(source, live = false) {
           if (typeof Tesseract === 'undefined') return false;
           const worker = await this.getOcrWorker();
-          const regions = this.getScanRegions(source, fast);
-          for (const region of regions) {
-            for (const variant of this.buildVariants(region, fast)) {
-              try {
-                const { data: { text } } = await worker.recognize(variant);
-                const octets = MacInput.parseFromOcr(text);
-                if (octets) {
-                  MacInput.fillOctets(octets);
-                  this.setStatus('인식 완료 (번호): ' + octets.join('.'));
-                  setTimeout(() => this.close(), 600);
-                  return true;
-                }
-              } catch (err) {
-                console.debug('ocr:', err);
+          const attempts = live ? this.buildOcrAttemptsLive(source) : this.buildOcrAttempts(source);
+          for (const canvas of attempts) {
+            try {
+              const hit = await this.recognizeNumber(worker, canvas);
+              if (hit) {
+                MacInput.fillOctets(hit.octets);
+                this.setStatus('인식 완료 (번호): ' + hit.octets.join('.'));
+                setTimeout(() => this.close(), 600);
+                return true;
               }
+            } catch (err) {
+              console.debug('ocr:', err);
             }
           }
           return false;
@@ -1450,12 +1531,18 @@
           this.setStatus('카메라 준비 중...');
           this.scanning = true;
           this.lastOcrAt = 0;
+          this.lastOcrHint = '';
+          this.frameCount = 0;
           try {
+            if (typeof Tesseract !== 'undefined') {
+              this.setStatus('인식 엔진 준비 중...');
+              await this.getOcrWorker();
+            }
             this.stream = await this.startCamera();
             dom.scannerVideo.srcObject = this.stream;
             dom.scannerVideo.setAttribute('playsinline', '');
             await dom.scannerVideo.play();
-            this.setStatus('라벨 하단 바코드/번호를 가이드 안에 맞춰 주세요.');
+            this.setStatus('라벨 번호(94.20.50.87)가 가이드 안에 보이게 맞춰 주세요.');
             this.scanLoop();
           } catch (err) {
             this.scanning = false;
@@ -1467,21 +1554,28 @@
           if (!this.scanning) return;
           const frame = this.captureFrame();
           if (frame) {
-            const zxingHit = await this.tryZxing(frame, true);
-            if (!zxingHit) {
-              const now = Date.now();
-              if (!this.ocrBusy && now - this.lastOcrAt > 1800) {
-                this.ocrBusy = true;
-                this.lastOcrAt = now;
-                this.setStatus('번호 인식 중...');
-                await this.tryOcr(frame, true);
-                this.ocrBusy = false;
-                if (this.scanning) this.setStatus('라벨 하단 바코드/번호를 가이드 안에 맞춰 주세요.');
+            this.frameCount++;
+            if (this.frameCount % 5 === 0) {
+              if (await this.tryZxing(frame, true)) {
+                if (this.scanning) this.timerId = setTimeout(() => this.scanLoop(), 300);
+                return;
+              }
+            }
+            const now = Date.now();
+            if (!this.ocrBusy && now - this.lastOcrAt > 2200) {
+              this.ocrBusy = true;
+              this.lastOcrAt = now;
+              this.setStatus('번호 인식 중...');
+              const hit = await this.tryOcr(frame, true);
+              this.ocrBusy = false;
+              if (!hit && this.scanning) {
+                const hint = this.lastOcrHint ? ` (읽은값: ${this.lastOcrHint})` : '';
+                this.setStatus('번호를 가이드 중앙에 맞춰 주세요.' + hint);
               }
             }
           }
           if (this.scanning) {
-            this.timerId = setTimeout(() => this.scanLoop(), 250);
+            this.timerId = setTimeout(() => this.scanLoop(), 300);
           }
         },
         close() {
@@ -1509,7 +1603,7 @@
               img.src = url;
             });
             this.setStatus('이미지 분석 중...');
-            if (await this.tryOcr(img)) {
+            if (await this.tryOcr(img, false)) {
               setStatus('번호 인식 완료');
               return;
             }
