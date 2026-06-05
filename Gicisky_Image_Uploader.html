@@ -1243,7 +1243,10 @@
       /* ──────────── 바코드 스캔 (ZXing: 카메라 / 사진) ──────────── */
       const BarcodeScanner = {
         codeReader: null,
+        scanCanvas: null,
+        stream: null,
         scanning: false,
+        timerId: null,
 
         getHints() {
           const hints = new Map();
@@ -1271,6 +1274,54 @@
         setStatus(msg) {
           dom.scannerStatus.textContent = msg;
         },
+        formatCameraError(err) {
+          switch (err.name) {
+            case 'NotAllowedError':
+              return '카메라 권한이 거부되었습니다. 브라우저 설정에서 허용해 주세요.';
+            case 'NotFoundError':
+              return '카메라를 찾을 수 없습니다.';
+            case 'NotReadableError':
+              return '카메라가 다른 앱에서 사용 중입니다.';
+            case 'OverconstrainedError':
+              return '요청한 카메라 설정을 지원하지 않습니다.';
+            default:
+              return err.message || String(err);
+          }
+        },
+        // ZXing decodeFromVideoDevice 대신 직접 getUserMedia로 카메라를 열어 권한/충돌 문제를 줄임
+        async startCamera() {
+          const attempts = [
+            { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+            { video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+            { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+            { video: true, audio: false },
+          ];
+          let lastError = null;
+          for (const constraints of attempts) {
+            try {
+              return await navigator.mediaDevices.getUserMedia(constraints);
+            } catch (err) {
+              lastError = err;
+            }
+          }
+          throw lastError || new Error('카메라를 시작할 수 없습니다.');
+        },
+        isNotFoundError(err) {
+          return err && (
+            err instanceof ZXing.NotFoundException ||
+            err.name === 'NotFoundException' ||
+            err.constructor?.name === 'NotFoundException'
+          );
+        },
+        captureFrame() {
+          const video = dom.scannerVideo;
+          if (!video.videoWidth || !video.videoHeight) return null;
+          if (!this.scanCanvas) this.scanCanvas = document.createElement('canvas');
+          this.scanCanvas.width = video.videoWidth;
+          this.scanCanvas.height = video.videoHeight;
+          this.scanCanvas.getContext('2d').drawImage(video, 0, 0);
+          return this.scanCanvas;
+        },
         handleResult(text) {
           if (MacInput.applyBarcode(text)) {
             this.setStatus('인식 완료: ' + text);
@@ -1285,34 +1336,51 @@
             alert('바코드 라이브러리 로드 실패. 페이지를 새로고침해 주세요.');
             return;
           }
+          if (!navigator.mediaDevices?.getUserMedia) {
+            alert('이 브라우저는 카메라를 지원하지 않습니다. HTTPS 환경의 Chrome/Edge를 사용해 주세요.');
+            return;
+          }
           dom.scannerOverlay.classList.add('active');
           this.setStatus('카메라 준비 중...');
           this.scanning = true;
           try {
-            const reader = this.getReader();
-            // 후면 카메라 우선 선택
-            const devices = await ZXing.BrowserCodeReader.listVideoInputDevices();
-            const backCam = devices.find(d =>
-              /back|rear|environment/i.test(d.label)
-            );
-            const deviceId = backCam ? backCam.deviceId : (devices[0]?.deviceId);
-
-            await reader.decodeFromVideoDevice(
-              deviceId,
-              dom.scannerVideo.id,
-              (result, err) => {
-                if (!this.scanning) return;
-                if (result) this.handleResult(result.getText());
-              }
-            );
+            this.stream = await this.startCamera();
+            dom.scannerVideo.srcObject = this.stream;
+            dom.scannerVideo.setAttribute('playsinline', '');
+            await dom.scannerVideo.play();
             this.setStatus('바코드를 가이드 안에 맞춰 주세요.');
+            this.scanLoop();
           } catch (err) {
-            this.setStatus('카메라 접근 실패: ' + err.message);
+            this.scanning = false;
+            this.setStatus('카메라 접근 실패: ' + this.formatCameraError(err));
             console.error(err);
+          }
+        },
+        async scanLoop() {
+          if (!this.scanning) return;
+          const frame = this.captureFrame();
+          if (frame) {
+            try {
+              const result = await this.getReader().decodeFromImageElement(frame);
+              if (result) this.handleResult(result.getText());
+            } catch (err) {
+              // NotFoundException은 프레임마다 정상적으로 발생
+              if (!this.isNotFoundError(err)) {
+                console.debug('scan:', err);
+              }
+            }
+          }
+          if (this.scanning) {
+            this.timerId = setTimeout(() => this.scanLoop(), 150);
           }
         },
         close() {
           this.scanning = false;
+          if (this.timerId) clearTimeout(this.timerId);
+          if (this.stream) {
+            this.stream.getTracks().forEach(t => t.stop());
+            this.stream = null;
+          }
           if (this.codeReader) this.codeReader.reset();
           dom.scannerVideo.srcObject = null;
           dom.scannerOverlay.classList.remove('active');
