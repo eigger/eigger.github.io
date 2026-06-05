@@ -541,8 +541,9 @@
     </div>
   </div>
 
-  <!-- ZXing: 1D 바코드 인식 -->
+  <!-- ZXing + Quagga2: 1D 바코드 인식 -->
   <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
 
   <!-- JavaScript: 기능별 모듈화 (슬라이더 오버레이 적용 및 pixelData 갱신) -->
   <script>
@@ -1294,13 +1295,12 @@
 
       /* ──────────── 바코드 스캔 (ZXing + 이진화 미리보기) ──────────── */
       const BarcodeScanner = {
-        codeReader: null,
         scanCanvas: null,
         stream: null,
         staticImage: null,
         scanning: false,
         timerId: null,
-        upscale: 4,
+        upscale: 5,
 
         getHints() {
           const hints = new Map();
@@ -1309,17 +1309,19 @@
             ZXing.BarcodeFormat.CODE_39,
             ZXing.BarcodeFormat.ITF,
             ZXing.BarcodeFormat.CODABAR,
+            ZXing.BarcodeFormat.CODE_93,
+            ZXing.BarcodeFormat.MSI,
             ZXing.BarcodeFormat.EAN_13,
             ZXing.BarcodeFormat.EAN_8,
+            ZXing.BarcodeFormat.UPC_A,
           ]);
           hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
           return hints;
         },
-        getReader() {
-          if (!this.codeReader) {
-            this.codeReader = new ZXing.BrowserMultiFormatReader(this.getHints());
-          }
-          return this.codeReader;
+        getZxingReader() {
+          const reader = new ZXing.MultiFormatReader();
+          reader.setHints(this.getHints());
+          return reader;
         },
         setStatus(msg) {
           dom.scannerStatus.textContent = msg;
@@ -1392,27 +1394,75 @@
           return this.cropCanvas(src, { x: 0.1, y: 0.2, w: 0.8, h: 0.6 });
         },
         // 크롭 → 확대 → 임계값 이진화 → 미리보기 캔버스에 표시
-        binarizeToPreview(src, threshold) {
+        renderToCanvas(src, threshold, invert = false, grayscaleOnly = false) {
           const sw = src.width || src.naturalWidth;
           const sh = src.height || src.naturalHeight;
           const w = Math.max(1, Math.round(sw * this.upscale));
           const h = Math.max(1, Math.round(sh * this.upscale));
-          const preview = dom.scannerPreview;
-          preview.width = w;
-          preview.height = h;
-          const ctx = preview.getContext('2d');
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
           ctx.imageSmoothingEnabled = false;
           ctx.drawImage(src, 0, 0, w, h);
           const imageData = ctx.getImageData(0, 0, w, h);
           const data = imageData.data;
           for (let i = 0; i < data.length; i += 4) {
             const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-            const v = lum < threshold ? 0 : 255;
+            let v = grayscaleOnly ? lum : (lum < threshold ? 0 : 255);
+            if (invert && !grayscaleOnly) v = 255 - v;
             data[i] = data[i + 1] = data[i + 2] = v;
             data[i + 3] = 255;
           }
           ctx.putImageData(imageData, 0, 0);
-          return preview;
+          return canvas;
+        },
+        showPreview(canvas) {
+          const preview = dom.scannerPreview;
+          preview.width = canvas.width;
+          preview.height = canvas.height;
+          preview.getContext('2d').drawImage(canvas, 0, 0);
+        },
+        // ZXing 저수준 API (이미 이진화된 이미지에 더 안정적)
+        decodeWithZxing(canvas) {
+          const ctx = canvas.getContext('2d');
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const source = new ZXing.RGBLuminanceSource(canvas.width, canvas.height, imageData.data);
+          const reader = this.getZxingReader();
+          for (const Binarizer of [ZXing.HybridBinarizer, ZXing.GlobalHistogramBinarizer]) {
+            try {
+              return reader.decode(new ZXing.BinaryBitmap(new Binarizer(source))).getText();
+            } catch (err) {
+              if (!this.isNotFoundError(err)) console.debug('zxing:', err);
+            }
+          }
+          return null;
+        },
+        decodeWithQuagga(canvas) {
+          if (typeof Quagga === 'undefined') return Promise.resolve(null);
+          return new Promise((resolve) => {
+            Quagga.decodeSingle({
+              src: canvas.toDataURL('image/png'),
+              numOfWorkers: 0,
+              locate: false,
+              decoder: {
+                readers: [
+                  'code_128_reader',
+                  'code_39_reader',
+                  'i2of5_reader',
+                  'codabar_reader',
+                  'ean_reader',
+                ],
+              },
+            }, (result) => {
+              resolve(result?.codeResult?.code || null);
+            });
+          });
+        },
+        async decodeCanvas(canvas) {
+          const zxingText = this.decodeWithZxing(canvas);
+          if (zxingText) return zxingText;
+          return await this.decodeWithQuagga(canvas);
         },
         handleResult(text) {
           if (MacInput.applyBarcode(text)) {
@@ -1420,17 +1470,27 @@
             setTimeout(() => this.close(), 600);
             return true;
           }
-          this.setStatus('인식: ' + text + ' (형식 불일치)');
+          this.setStatus('바코드 읽음: ' + text + ' (번호 형식 아님)');
           return false;
         },
         async tryDecode(source) {
           const region = this.getGuideRegion(source);
-          const binary = this.binarizeToPreview(region, this.getThreshold());
-          try {
-            const result = await this.getReader().decodeFromImageElement(binary);
-            if (result) return this.handleResult(result.getText());
-          } catch (err) {
-            if (!this.isNotFoundError(err)) console.debug('barcode:', err);
+          const threshold = this.getThreshold();
+          const barcodeStrip = this.cropCanvas(region, { x: 0, y: 0.35, w: 1, h: 0.65 });
+
+          const attempts = [
+            this.renderToCanvas(region, threshold, false, false),
+            this.renderToCanvas(barcodeStrip, threshold, false, false),
+            this.renderToCanvas(region, threshold, true, false),
+            this.renderToCanvas(barcodeStrip, threshold, true, false),
+            this.renderToCanvas(region, threshold, false, true),
+          ];
+
+          this.showPreview(attempts[0]);
+
+          for (const canvas of attempts) {
+            const text = await this.decodeCanvas(canvas);
+            if (text && this.handleResult(text)) return true;
           }
           return false;
         },
@@ -1485,7 +1545,6 @@
           this.staticImage = null;
           if (this.timerId) clearTimeout(this.timerId);
           this.stopCamera();
-          if (this.codeReader) this.codeReader.reset();
           dom.scannerOverlay.classList.remove('active');
         },
         async decodeFromFile(file) {
