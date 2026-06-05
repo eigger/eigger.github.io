@@ -230,6 +230,140 @@
       font-size: 14px;
       max-width: 150px;
     }
+
+    .mac-input {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 2px;
+      margin: 10px 0;
+    }
+
+    .mac-dot {
+      font-weight: bold;
+      font-size: 18px;
+      color: var(--secondary-color);
+    }
+
+    .mac-octet {
+      width: 40px;
+      min-width: 0;
+      padding: 5px 2px;
+      text-align: center;
+      font-size: 15px;
+    }
+
+    .mac-actions {
+      margin: 6px 0 10px;
+    }
+
+    .scan-button {
+      font-size: 13px;
+      padding: 6px 14px;
+    }
+
+    .scanner-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.75);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .scanner-overlay.active {
+      display: flex;
+    }
+
+    .scanner-panel {
+      background: var(--container-bg);
+      border-radius: 12px;
+      padding: 16px;
+      max-width: 90vw;
+      width: 360px;
+      box-shadow: 0 4px 20px var(--shadow-color);
+    }
+
+    .scanner-panel h2 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .scanner-video-wrap {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+      aspect-ratio: 4 / 3;
+    }
+
+    #scannerVideo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .scanner-guide {
+      position: absolute;
+      inset: 20% 10%;
+      border: 2px dashed rgba(255, 255, 255, 0.7);
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    .scanner-status {
+      margin: 10px 0 0;
+      font-size: 13px;
+      color: var(--secondary-color);
+      min-height: 1.2em;
+    }
+
+    .scanner-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
+    .scanner-buttons button {
+      flex: 1;
+      max-width: none;
+    }
+
+    #barcodePhotoInput {
+      display: none;
+    }
+
+    .progress-wrap {
+      position: relative;
+      display: none;
+      max-width: 300px;
+      height: 18px;
+      margin: 8px auto;
+      background-color: var(--status-bg);
+      border-radius: 9px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background-color: var(--primary-color);
+      transition: width 0.2s ease;
+    }
+
+    .progress-text {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      line-height: 18px;
+      font-size: 11px;
+      font-weight: bold;
+      color: var(--text-color);
+    }
   </style>
 </head>
 
@@ -270,23 +404,10 @@
       </div>
     </div>
 
-    <!-- Width & Height 설정 -->
-    <div style="display: none;">
-      <label for="widthInput">Width:</label>
-      <input type="text" id="widthInput" value="250" style="width: 50px;">
-      <label for="heightInput">Height:</label>
-      <input type="text" id="heightInput" value="128" style="width: 50px;">
-    </div>
-
-    <!-- 체크박스 옵션 -->
-    <div class="options" style="display: none;">
-      <label><input type="checkbox" id="secondColorCheckbox"> Second Color</label>
-      <label><input type="checkbox" id="rotationCheckbox"> Rotation</label>
-      <label><input type="checkbox" id="mirrorCheckbox"> Mirror</label>
-      <label><input type="checkbox" id="tftCheckbox"> TFT</label>
-      <label><input type="checkbox" id="compressionCheckbox"> Compression</label>
-      <label><input type="checkbox" id="invertLuminanceCheckbox"> Invert Luminance</label>
-    </div>
+    <!--
+      라벨 타입별 설정(가로/세로/회전/미러/압축 등)은 더 이상 숨김 input/checkbox로
+      관리하지 않고, 아래 <script>의 LabelState 객체와 LABEL_CONFIG 맵으로 관리합니다.
+    -->
 
     <div class="step-container">
       <label>3 단계 : 이미지의 크기 및 색상을 조절 하세요.</label><br>
@@ -297,11 +418,11 @@
       </div>
       <!-- 슬라이더 컨트롤 -->
       <div class="slider-container">
-        <label for="luminanceSlider">검정 색상: <span id="lumVal">128</span></label>
+        <label for="luminanceSlider">검정 임계값: <span id="lumVal">128</span></label>
         <input type="range" id="luminanceSlider" min="0" max="255" value="128">
       </div>
       <div class="slider-container">
-        <label for="redSlider">빨강 색상: <span id="redVal">170</span></label>
+        <label for="redSlider">빨강 임계값: <span id="redVal">170</span></label>
         <input type="range" id="redSlider" min="0" max="255" value="170">
       </div>
     </div>
@@ -312,11 +433,31 @@
     <!-- BLE 업로드 섹션 (필요 시) -->
     <div class="step-container">
       <label>4 단계 : 전자라벨에 연결하여 이미지를 업로드 하세요.</label><br>
-      <label class="info">- 이미지 업로드 버튼을 눌러 전자라벨이 나타날때까지 기다려 주세요.</label><br>
-      <label class="info">- ex: 전자라벨 번호 92.12.78.64 -> NEMR92127864 선택</label><br>
-      <label class="info">- ex: PICKSMART 선택</label>
+      <label class="info">- 전자라벨 화면/바코드의 번호(예: 92.12.78.64)를 입력하거나 바코드를 스캔하세요.</label><br>
+      <label class="info">- 입력한 라벨만 블루투스 선택창에 표시됩니다.</label><br>
+      <label class="info">- 미입력 시 주변의 모든 전자라벨이 표시됩니다.</label>
+
+      <div class="mac-input">
+        <input type="text" class="mac-octet" id="mac0" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+        <span class="mac-dot">.</span>
+        <input type="text" class="mac-octet" id="mac1" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+        <span class="mac-dot">.</span>
+        <input type="text" class="mac-octet" id="mac2" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+        <span class="mac-dot">.</span>
+        <input type="text" class="mac-octet" id="mac3" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+      </div>
+      <div class="mac-actions">
+        <button type="button" class="scan-button" id="scanBarcodeButton">바코드 스캔</button>
+        <input type="file" id="barcodePhotoInput" accept="image/*" capture="environment">
+      </div>
+
       <div class="send-image">
         <button id="uploadButton">이미지 업로드</button>
+      </div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar" id="progressBar"></div>
+        <span class="progress-text" id="progressText">0%</span>
       </div>
 
       <div class="log-view">
@@ -335,54 +476,131 @@
 
   </div>
 
+  <!-- 바코드 스캔 오버레이 -->
+  <div class="scanner-overlay" id="scannerOverlay">
+    <div class="scanner-panel">
+      <h2>바코드 스캔</h2>
+      <div class="scanner-video-wrap">
+        <video id="scannerVideo" playsinline muted></video>
+        <div class="scanner-guide"></div>
+      </div>
+      <p class="scanner-status" id="scannerStatus">카메라 준비 중...</p>
+      <div class="scanner-buttons">
+        <button type="button" id="scannerPhotoButton">사진 촬영</button>
+        <button type="button" id="scannerCloseButton">닫기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- JavaScript: 기능별 모듈화 (슬라이더 오버레이 적용 및 pixelData 갱신) -->
   <script>
     (function () {
+      /* ──────────── 상수 ──────────── */
+      // BLE 이미지 전송 프로토콜 관련 상수
+      const IMAGE_PART_HEX_LEN = 480;   // 한 번에 전송하는 이미지 조각 길이(hex 문자 수)
+      const COMP_BLOCK_MARKER = 0x75;   // 압축 포맷에서 각 열(line) 블록 시작 마커
+      const COMP_HEADER_EXTRA = 7;      // 압축 블록 헤더에 더해지는 바이트 수
+
+      /* ──────────── DOM 참조 캐시 ──────────── */
+      // 반복되는 document.getElementById 호출을 한곳에 모아 가독성과 성능을 높입니다.
+      const $ = (id) => document.getElementById(id);
+      const dom = {
+        body: document.body,
+        themeToggle: $('themeToggle'),
+        bleSupport: $('ble-support'),
+        optionsSelect: $('optionsSelect'),
+        imageUpload: $('imageUpload'),
+        saveButton: $('saveButton'),
+        uploadButton: $('uploadButton'),
+        imageBox: $('myImage'),
+        canvas: $('myCanvas'),
+        luminanceSlider: $('luminanceSlider'),
+        redSlider: $('redSlider'),
+        lumVal: $('lumVal'),
+        redVal: $('redVal'),
+        pixelData: $('pixelData'),
+        status: $('status'),
+        log: $('log'),
+        progressWrap: $('progressWrap'),
+        progressBar: $('progressBar'),
+        progressText: $('progressText'),
+        macOctets: [$('mac0'), $('mac1'), $('mac2'), $('mac3')],
+        scanBarcodeButton: $('scanBarcodeButton'),
+        barcodePhotoInput: $('barcodePhotoInput'),
+        scannerOverlay: $('scannerOverlay'),
+        scannerVideo: $('scannerVideo'),
+        scannerStatus: $('scannerStatus'),
+        scannerPhotoButton: $('scannerPhotoButton'),
+        scannerCloseButton: $('scannerCloseButton'),
+      };
+
+      /* ──────────── 라벨 상태 ──────────── */
+      // 과거 숨김 input/checkbox로 관리하던 값들을 단일 상태 객체로 통합했습니다.
+      const LabelState = {
+        width: 250,
+        height: 128,
+        secondColor: true,    // 빨강(2색) 사용 여부
+        rotation: false,      // 90도 회전
+        mirror: false,        // 상하 반전
+        tft: false,           // TFT 패널(그레이 배경 + 리샘플)
+        compression: false,   // 압축 포맷 전송
+        invertLuminance: false, // 흑백 임계값 반전
+      };
+
+      // 라벨 타입(rawType) → 적용할 설정. 명시되지 않은 플래그는 기본값(false)입니다.
+      const LABEL_CONFIG = {
+        0xA0: { width: 250, height: 132, maxWidth: '350px', tft: true, secondColor: false, background: '#ccc' },
+        0x0B: { width: 250, height: 128, maxWidth: '350px' },
+        0x33: { width: 296, height: 128, maxWidth: '396px', mirror: true },
+        0x4B: { width: 400, height: 300, maxWidth: '450px', rotation: true },
+        0x2B: { width: 800, height: 480, maxWidth: '530px', rotation: true, mirror: true, compression: true, invertLuminance: true },
+        0x8B: { width: 960, height: 640, maxWidth: '550px', rotation: true, compression: true },
+        0x22B: { width: 240, height: 416, maxWidth: '450px', rotation: true, mirror: true, compression: true },
+      };
+
       /* ──────────── 유틸리티 함수 ──────────── */
       const Utils = {
-        bufferToHex(buffer) {
-          return [...new Uint8Array(buffer)]
+        // 바이트 배열/버퍼를 16진수 문자열로 변환
+        bytesToHex(data) {
+          return [...new Uint8Array(data)]
             .map(x => x.toString(16).padStart(2, '0'))
             .join('');
         },
         hexToBytes(hex) {
-          let bytes = [];
+          const bytes = [];
           for (let c = 0; c < hex.length; c += 2) {
             bytes.push(parseInt(hex.substr(c, 2), 16));
           }
           return new Uint8Array(bytes);
         },
-        bytesToHex(data) {
-          return Array.from(new Uint8Array(data))
-            .map(i => ("0" + i.toString(16)).slice(-2))
-            .join('');
-        },
+        // 32비트 정수를 리틀엔디언 4바이트 hex 문자열로 변환
         intToHex(num) {
           const hexStr = ("00000000" + num.toString(16)).slice(-8);
           return hexStr.substring(6, 8) + hexStr.substring(4, 6) + hexStr.substring(2, 4) + hexStr.substring(0, 2);
-        },
-        clamp(value) {
-          return Math.max(0, Math.min(255, value));
         }
       };
 
       /* ──────────── 테마 관리 ──────────── */
       const ThemeManager = {
+        // 버튼에는 "현재 클릭하면 전환될 테마"의 아이콘을 표시합니다.
+        // (라이트 모드 → 🌙, 다크 모드 → ☀️)
+        syncIcon() {
+          const isDark = dom.body.getAttribute("data-theme") === "dark";
+          dom.themeToggle.textContent = isDark ? "☀️" : "🌙";
+        },
         toggleTheme() {
-          const body = document.body;
-          const toggleBtn = document.getElementById('themeToggle');
-          const currentTheme = body.getAttribute("data-theme");
+          const currentTheme = dom.body.getAttribute("data-theme");
           const newTheme = currentTheme === "light" ? "dark" : "light";
-          body.setAttribute("data-theme", newTheme);
-          toggleBtn.textContent = newTheme === "light" ? "☀️" : "🌙";
+          dom.body.setAttribute("data-theme", newTheme);
+          ThemeManager.syncIcon();
         }
       };
 
       /* ──────────── 캔버스 관리 ──────────── */
       const CanvasManager = {
-        container: document.getElementById("myImage"),
-        canvas: document.getElementById('myCanvas'),
-        ctx: document.getElementById('myCanvas').getContext('2d'),
+        container: dom.imageBox,
+        canvas: dom.canvas,
+        ctx: dom.canvas.getContext('2d'),
         originalImageData: null, // 업로드된 원본 이미지 데이터를 저장
         image: null,  // 드래그 이동 및 확대/축소를 위한 이미지 저장
         scale: 1,
@@ -391,11 +609,8 @@
         offsetX: 0,
         offsetY: 0,
         initCanvas() {
-          document.getElementById('imageUpload').value = '';
-          const width = parseInt(document.getElementById('widthInput')?.value || 250);
-          const height = parseInt(document.getElementById('heightInput')?.value || 128);
-          var tftEnabled = document.getElementById('tftCheckbox').checked;
-          document.getElementById("saveButton").disabled = true;
+          dom.imageUpload.value = '';
+          dom.saveButton.disabled = true;
           this.originalImageData = null;
           this.image = null;
           this.scale = 1;
@@ -403,84 +618,45 @@
           this.newH = 0;
           this.offsetX = 0;
           this.offsetY = 0;
-          this.canvas.width = width;
-          this.canvas.height = height;
+          this.canvas.width = LabelState.width;
+          this.canvas.height = LabelState.height;
           this.canvas.removeAttribute("style");
           if (this.canvas.width > this.container.clientWidth - 15) {
             this.canvas.style.width = `${this.container.clientWidth - 15}px`;
           }
 
-          this.ctx.fillStyle = 'white';
-          if (tftEnabled) this.ctx.fillStyle = '#969696';
-          this.ctx.fillRect(0, 0, width, height);
+          this.ctx.fillStyle = LabelState.tft ? '#969696' : 'white';
+          this.ctx.fillRect(0, 0, LabelState.width, LabelState.height);
         },
 
+        // 선택된 라벨 타입에 맞춰 LabelState와 미리보기 박스를 갱신합니다.
         decodeTypes() {
-          var select = document.getElementById("optionsSelect");
-          var selectedValue = select.options[select.selectedIndex].value;
-          var rawType = Number("0x" + selectedValue);
-
+          const rawType = Number("0x" + dom.optionsSelect.value);
           console.log("Display Type: " + rawType);
-          document.getElementById('rotationCheckbox').checked = false;
-          document.getElementById('tftCheckbox').checked = false;
-          document.getElementById('mirrorCheckbox').checked = false;
-          document.getElementById('compressionCheckbox').checked = false;
-          document.getElementById('invertLuminanceCheckbox').checked = false;
-          document.getElementById('myImage').style.background = 'white';
-          document.getElementById('secondColorCheckbox').checked = true;
-          document.getElementById('redSlider').disabled = false;
-          switch (rawType) {
-            case 0xA0:
-              document.getElementById('heightInput').value = "132";
-              document.getElementById('widthInput').value = "250";
-              document.getElementById('myImage').style.maxWidth = '350px';
-              document.getElementById('tftCheckbox').checked = true;
-              document.getElementById('myImage').style.background = '#ccc';
-              document.getElementById('secondColorCheckbox').checked = false;
-              document.getElementById('redSlider').disabled = true;
-              break;
-            case 0x0B:
-              document.getElementById('heightInput').value = "128";
-              document.getElementById('widthInput').value = "250";
-              document.getElementById('myImage').style.maxWidth = '350px';
-              break;
-            case 0x33:
-              document.getElementById('heightInput').value = "128";
-              document.getElementById('widthInput').value = "296";
-              document.getElementById('myImage').style.maxWidth = '396px';
-              document.getElementById('mirrorCheckbox').checked = true;
-              break;
-            case 0x4B:
-              document.getElementById('heightInput').value = "300";
-              document.getElementById('widthInput').value = "400";
-              document.getElementById('myImage').style.maxWidth = '450px';
-              document.getElementById('rotationCheckbox').checked = true;
-              break;
-            case 0x2B:
-              document.getElementById('heightInput').value = "480";
-              document.getElementById('widthInput').value = "800";
-              document.getElementById('myImage').style.maxWidth = '530px';
-              document.getElementById('rotationCheckbox').checked = true;
-              document.getElementById('mirrorCheckbox').checked = true;
-              document.getElementById('compressionCheckbox').checked = true;
-              document.getElementById('invertLuminanceCheckbox').checked = true;
-              break;
-            case 0x8B:
-              document.getElementById('heightInput').value = "640";
-              document.getElementById('widthInput').value = "960";
-              document.getElementById('myImage').style.maxWidth = '550px';
-              document.getElementById('rotationCheckbox').checked = true;
-              document.getElementById('compressionCheckbox').checked = true;
-              break;
-            case 0x22B:
-              document.getElementById('heightInput').value = "416";
-              document.getElementById('widthInput').value = "240";
-              document.getElementById('myImage').style.maxWidth = '450px';
-              document.getElementById('rotationCheckbox').checked = true;
-              document.getElementById('mirrorCheckbox').checked = true;
-              document.getElementById('compressionCheckbox').checked = true;
-              break;
+
+          // 기본값으로 초기화 후, 해당 타입의 설정만 덮어씁니다.
+          Object.assign(LabelState, {
+            secondColor: true,
+            rotation: false,
+            mirror: false,
+            tft: false,
+            compression: false,
+            invertLuminance: false,
+          });
+
+          const config = LABEL_CONFIG[rawType];
+          if (config) {
+            const { maxWidth, background, ...flags } = config;
+            Object.assign(LabelState, flags);
+            dom.imageBox.style.maxWidth = maxWidth || '350px';
+            dom.imageBox.style.background = background || 'white';
+          } else {
+            dom.imageBox.style.maxWidth = '350px';
+            dom.imageBox.style.background = 'white';
           }
+
+          // 빨강 슬라이더는 2색(빨강)을 사용할 때만 활성화합니다.
+          dom.redSlider.disabled = !LabelState.secondColor;
         },
         /* displayOverlay() : 원본 이미지 데이터를 이용해
            - bwData: luminance 기준 (luminance > lumThreshold → 흰색, 아니면 검정)
@@ -497,10 +673,10 @@
           const finalData = this.ctx.createImageData(width, height);
 
           // 슬라이더 값 읽기
-          const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
-          const redThreshold = parseInt(document.getElementById('redSlider').value);
-          var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
-          var tftEnabled = document.getElementById('tftCheckbox').checked;
+          const lumThreshold = parseInt(dom.luminanceSlider.value);
+          const redThreshold = parseInt(dom.redSlider.value);
+          const secondColorEnabled = LabelState.secondColor;
+          const tftEnabled = LabelState.tft;
 
           for (let i = 0; i < origData.data.length; i += 4) {
             const r = origData.data[i];
@@ -560,20 +736,20 @@
         },
 
         getPixelData() {
-          var secondColorEnabled = document.getElementById('secondColorCheckbox').checked;
-          var rotationEnabled = document.getElementById('rotationCheckbox').checked;
-          var tftEnabled = document.getElementById('tftCheckbox').checked;
-          var mirrorEnabled = document.getElementById('mirrorCheckbox').checked;
-          var compressionEnabled = document.getElementById('compressionCheckbox').checked;
-          var invertLuminanceEnabled = document.getElementById('invertLuminanceCheckbox').checked;
-          var canvas = document.getElementById('myCanvas');
-          var ctx = canvas.getContext('2d');
+          const secondColorEnabled = LabelState.secondColor;
+          const rotationEnabled = LabelState.rotation;
+          const tftEnabled = LabelState.tft;
+          const mirrorEnabled = LabelState.mirror;
+          const compressionEnabled = LabelState.compression;
+          const invertLuminanceEnabled = LabelState.invertLuminance;
+          var canvas = this.canvas;
+          var ctx = this.ctx;
           var width = canvas.width;
           var height = canvas.height;
           var imageData = ctx.getImageData(0, 0, width, height);
           // 슬라이더 값 읽기
-          const lumThreshold = parseInt(document.getElementById('luminanceSlider').value);
-          const redThreshold = parseInt(document.getElementById('redSlider').value);
+          const lumThreshold = parseInt(dom.luminanceSlider.value);
+          const redThreshold = parseInt(dom.redSlider.value);
           let originalCanvas = document.createElement("canvas");
           let originalCtx = originalCanvas.getContext("2d");
           originalCanvas.width = canvas.width;
@@ -662,60 +838,46 @@
             byteDataRed.push(currentByteRed);
           }
 
-          var byteDataCompressed = [];
-          var pixelDataTextarea = document.getElementById('pixelData');
+          let outputBytes = [];
           if (compressionEnabled) {
-            var currentPosi = 0;
-            var byte_per_line = height / 8;
-            byteDataCompressed.push(0x00);
-            byteDataCompressed.push(0x00);
-            byteDataCompressed.push(0x00);
-            byteDataCompressed.push(0x00);
-            for (var i = 0; i < width; i += 1) {
-              byteDataCompressed.push(0x75);
-              byteDataCompressed.push(byte_per_line + 7);
-              byteDataCompressed.push(byte_per_line);
-              byteDataCompressed.push(0x00);
-              byteDataCompressed.push(0x00);
-              byteDataCompressed.push(0x00);
-              byteDataCompressed.push(0x00);
-              for (var b = 0; b < byte_per_line; b++) {
-                byteDataCompressed.push(byteData[currentPosi++]);
-              }
-            }
-            currentPosi = 0;
-            if (secondColorEnabled) {
-              for (var i = 0; i < width; i += 1) {
-                byteDataCompressed.push(0x75);
-                byteDataCompressed.push(byte_per_line + 7);
-                byteDataCompressed.push(byte_per_line);
-                byteDataCompressed.push(0x00);
-                byteDataCompressed.push(0x00);
-                byteDataCompressed.push(0x00);
-                byteDataCompressed.push(0x00);
-                for (var b = 0; b < byte_per_line; b++) {
-                  byteDataCompressed.push(byteDataRed[currentPosi++]);
+            const bytesPerLine = height / 8;
+            // 선두 4바이트는 전체 길이 헤더 자리(값은 마지막에 채움)
+            outputBytes.push(0x00, 0x00, 0x00, 0x00);
+
+            // 한 채널(흑백 또는 빨강)을 열(line) 단위 압축 포맷으로 인코딩
+            const appendChannel = (channelBytes) => {
+              let pos = 0;
+              for (let col = 0; col < width; col++) {
+                outputBytes.push(
+                  COMP_BLOCK_MARKER,
+                  bytesPerLine + COMP_HEADER_EXTRA,
+                  bytesPerLine,
+                  0x00, 0x00, 0x00, 0x00
+                );
+                for (let b = 0; b < bytesPerLine; b++) {
+                  outputBytes.push(channelBytes[pos++]);
                 }
               }
-            }
-            byteDataCompressed[0] = byteDataCompressed.length & 0xff;
-            byteDataCompressed[1] = (byteDataCompressed.length >> 8) & 0xff;
-            byteDataCompressed[2] = (byteDataCompressed.length >> 16) & 0xff;
-            byteDataCompressed[3] = (byteDataCompressed.length >> 24) & 0xff;
+            };
+
+            appendChannel(byteData);
+            if (secondColorEnabled) appendChannel(byteDataRed);
+
+            // 선두 4바이트에 전체 길이를 리틀엔디언으로 기록
+            const len = outputBytes.length;
+            outputBytes[0] = len & 0xff;
+            outputBytes[1] = (len >> 8) & 0xff;
+            outputBytes[2] = (len >> 16) & 0xff;
+            outputBytes[3] = (len >> 24) & 0xff;
+          } else {
+            outputBytes = [...byteData];
+            if (secondColorEnabled) outputBytes = [...outputBytes, ...byteDataRed];
           }
-          else {
-            for (var b = 0; b < byteData.length; b++) {
-              byteDataCompressed.push(byteData[b]);
-            }
-            if (secondColorEnabled) {
-              byteDataCompressed = [...byteDataCompressed, ...byteDataRed];
-            }
-          }
-          pixelDataTextarea.value = Utils.bufferToHex(byteDataCompressed);
+          dom.pixelData.value = Utils.bytesToHex(outputBytes);
         },
         /* 이미지 업로드 시 원본 이미지를 캔버스에 그리고 저장 */
         drawImage(img) {
-          document.getElementById("saveButton").disabled = false;
+          dom.saveButton.disabled = false;
           this.image = img;  // 로드된 이미지를 저장합니다.
           const canvasW = this.canvas.width;
           const canvasH = this.canvas.height;
@@ -742,11 +904,6 @@
           // 오버레이 처리를 위해 현재 캔버스의 이미지 데이터를 저장한 후 displayOverlay() 호출
           this.originalImageData = this.ctx.getImageData(0, 0, canvasW, canvasH);
           this.displayOverlay();
-        },
-        findNearestColor(r, g, b) {
-          if (r > 128 && g < 128 && b < 128) return [255, 0, 0];
-          const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-          return luminance < 85 ? [0, 0, 0] : [255, 255, 255];
         },
         saveImage() {
           // PNG 포맷으로 Data URI 생성
@@ -780,11 +937,12 @@
         imgHexData: "",
         imgHexLength: 0,
         uploadPartIndex: 0,
+        totalParts: 0,
         serviceUuid: 0,
         checkSupport() {
           if (!navigator.bluetooth) {
-            document.getElementById("ble-support").innerHTML = "해당 브라우저는 Web Bluetooth를 지원하지 않습니다.<br>PC Chrome 브라우저 에서 시도하세요";
-            document.getElementById("uploadButton").disabled = true;
+            dom.bleSupport.innerHTML = "해당 브라우저는 Web Bluetooth를 지원하지 않습니다.<br>PC Chrome 브라우저 에서 시도하세요";
+            dom.uploadButton.disabled = true;
           }
         },
         reset() {
@@ -795,6 +953,7 @@
           this.imgHexData = "";
           this.imgHexLength = 0;
           this.uploadPartIndex = 0;
+          this.totalParts = 0;
           this.serviceUuid = 0;
         },
         async sendCommand(cmd) {
@@ -825,12 +984,14 @@
           }
         },
         sendImageData() {
-          imgData = document.getElementById('pixelData').value
+          const imgData = dom.pixelData.value;
           this.imgHexData = imgData.replace(/(?:\r\n|\r|\n|,|0x| )/g, '');
           this.imgHexLength = this.imgHexData.length;
           this.uploadPartIndex = 0;
+          this.totalParts = Math.ceil(this.imgHexLength / IMAGE_PART_HEX_LEN);
           addLog("이미지 업로드");
           setStatus("이미지 업로드 시작");
+          setProgress(0);
           this.sendCommandHex("01");
         },
         handleImageState(dataHex) {
@@ -849,6 +1010,7 @@
               if (dataHex.substring(2, 4) === "08") {
                 addLog("이미지 업로드 완료");
                 setStatus("이미지 업로드 완료");
+                setProgress(100);
                 if (this.gattServer && this.gattServer.connected) {
                   if (this.bleDevice && this.bleDevice.gatt.connected)
                     this.bleDevice.gatt.disconnect();
@@ -867,12 +1029,16 @@
             let currentPartHex = "";
             console.log("PartACK: " + partAckHex + " PartUpload: " + Utils.intToHex(this.uploadPartIndex));
             if (partAckHex === Utils.intToHex(this.uploadPartIndex)) {
-              currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, 480);
-              this.imgHexData = this.imgHexData.substring(480);
+              currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, IMAGE_PART_HEX_LEN);
+              this.imgHexData = this.imgHexData.substring(IMAGE_PART_HEX_LEN);
               this.uploadPartIndex++;
             } else {
               addLog("오류 발생, 마지막 부분 재전송");
-              currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, 480);
+              currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, IMAGE_PART_HEX_LEN);
+            }
+            if (this.totalParts > 0) {
+              setProgress((this.uploadPartIndex / this.totalParts) * 100);
+              setStatus(`이미지 업로드 중... (${this.uploadPartIndex}/${this.totalParts})`);
             }
             console.log('Current Part: ' + currentPartHex);
             this.sendImageCommand(Utils.hexToBytes(currentPartHex));
@@ -883,27 +1049,42 @@
         disconnect() {
           this.reset();
           addLog('연결 해제됨.');
-          document.getElementById("uploadButton").disabled = false;
+          dom.uploadButton.disabled = false;
         },
         handleNotification(data) {
           addLog("수신 데이터 : " + Utils.bytesToHex(data.buffer));
           setTimeout(() => this.handleImageState(Utils.bytesToHex(data.buffer)), 50);
         },
         initiateConnection() {
-          document.getElementById("log").innerHTML = '';
-          document.getElementById("uploadButton").disabled = true;
+          dom.log.innerHTML = '';
+          dom.uploadButton.disabled = true;
+          setProgress(null);
           setStatus("라벨 선택중...");
           if (this.gattServer && this.gattServer.connected) {
             if (this.bleDevice && this.bleDevice.gatt.connected) this.bleDevice.gatt.disconnect();
-            document.getElementById("uploadButton").disabled = false;
+            dom.uploadButton.disabled = false;
           } else {
             this.reconnectAttempts = 0;
-            navigator.bluetooth.requestDevice({
-              filters: [
-                { manufacturerData: [{ companyIdentifier: 0x5053 }] }
-              ],
-              optionalServices: [0xFEF0, 0xFDF0]
-            }).then(device => {
+
+            // 입력된 라벨 번호가 있으면 해당 기기 이름(NEMRxxyyzzkk)으로 필터링하여
+            // 블루투스 선택창에 그 라벨만 표시되게 한다.
+            // (Web Bluetooth는 보안상 MAC으로 직접 연결할 수 없고 선택창도 생략 불가)
+            const target = MacInput.read();
+            let requestOptions;
+            if (target.valid) {
+              addLog("대상 라벨 : " + target.name + " (MAC " + target.mac + ")");
+              requestOptions = {
+                filters: [{ namePrefix: target.name }],
+                optionalServices: [0xFEF0, 0xFDF0]
+              };
+            } else {
+              requestOptions = {
+                filters: [{ manufacturerData: [{ companyIdentifier: 0x5053 }] }],
+                optionalServices: [0xFEF0, 0xFDF0]
+              };
+            }
+
+            navigator.bluetooth.requestDevice(requestOptions).then(device => {
               setStatus("연결중 : " + device.name);
               device.addEventListener('gattserverdisconnected', () => this.disconnect());
               this.bleDevice = device;
@@ -953,19 +1134,32 @@
         },
       }
       /* ──────────── BLE 상태 및 로그 헬퍼 ──────────── */
+      const MAX_LOG_LINES = 100;
       function setStatus(statusText) {
-        document.getElementById("status").innerHTML = statusText;
+        dom.status.innerHTML = statusText;
+      }
+      // 업로드 진행바 갱신 (percent: 0~100, null이면 숨김)
+      function setProgress(percent) {
+        if (percent === null) {
+          dom.progressWrap.style.display = 'none';
+          return;
+        }
+        const value = Math.max(0, Math.min(100, Math.round(percent)));
+        dom.progressWrap.style.display = 'block';
+        dom.progressBar.style.width = value + '%';
+        dom.progressText.textContent = value + '%';
       }
       function addLog(logText) {
         const now = new Date();
         const time = ("0" + now.getHours()).slice(-2) + ":" +
           ("0" + now.getMinutes()).slice(-2) + ":" +
           ("0" + now.getSeconds()).slice(-2) + " : ";
-        document.getElementById("log").innerHTML += time + logText + '<br>';
+        dom.log.innerHTML += time + logText + '<br>';
         console.log(time + logText);
-        while ((document.getElementById("log").innerHTML.match(/<br>/g) || []).length > 100) {
-          const firstBreak = document.getElementById("log").innerHTML.indexOf("<br>");
-          document.getElementById("log").innerHTML = document.getElementById("log").innerHTML.substring(firstBreak + 4);
+        // 로그가 너무 길어지면 오래된 줄부터 제거
+        while ((dom.log.innerHTML.match(/<br>/g) || []).length > MAX_LOG_LINES) {
+          const firstBreak = dom.log.innerHTML.indexOf("<br>");
+          dom.log.innerHTML = dom.log.innerHTML.substring(firstBreak + 4);
         }
       }
       function handleBLEError(error) {
@@ -977,12 +1171,198 @@
         }
       }
 
+      /* ──────────── 라벨 번호(MAC) 입력 관리 ──────────── */
+      const BARCODE_FORMATS = ['code_128', 'code_39', 'ean_13', 'ean_8', 'qr_code', 'data_matrix'];
+
+      const MacInput = {
+        // 4개 옥텟 입력을 읽어 라벨 이름/MAC 정보를 반환한다.
+        // 화면 번호 xx.xx.xx.xx → 기기 이름 NEMRxxxxxxxx, 실제 MAC FF:FF:xx:xx:xx:xx
+        read() {
+          const parts = dom.macOctets.map(el => el.value.trim());
+          const valid = parts.every(p => /^[0-9a-fA-F]{1,2}$/.test(p));
+          if (!valid) return { valid: false };
+          const octets = parts.map(p => p.padStart(2, '0').toUpperCase());
+          return {
+            valid: true,
+            octets,
+            name: 'NEMR' + octets.join(''),
+            mac: 'FF:FF:' + octets.join(':'),
+          };
+        },
+        // 바코드 문자열을 4개 옥텟으로 파싱 (예: "92.95.85.02", "92958502")
+        parseBarcode(text) {
+          const cleaned = text.trim().toUpperCase();
+          const dotted = cleaned.match(/^([0-9A-F]{1,2})\.([0-9A-F]{1,2})\.([0-9A-F]{1,2})\.([0-9A-F]{1,2})$/);
+          if (dotted) {
+            return dotted.slice(1).map(o => o.padStart(2, '0'));
+          }
+          const digits = cleaned.replace(/[^0-9A-F]/g, '');
+          if (digits.length === 8) {
+            return [0, 2, 4, 6].map(i => digits.slice(i, i + 2));
+          }
+          return null;
+        },
+        fillOctets(octets) {
+          octets.forEach((val, i) => { dom.macOctets[i].value = val; });
+        },
+        applyBarcode(text) {
+          const octets = this.parseBarcode(text);
+          if (!octets) return false;
+          this.fillOctets(octets);
+          return true;
+        },
+        // 16진수만 허용하고, 두 자리 입력 시 다음 칸으로 자동 이동시킨다.
+        setupAutoAdvance() {
+          dom.macOctets.forEach((el, idx) => {
+            el.addEventListener('input', () => {
+              el.value = el.value.replace(/[^0-9a-fA-F]/g, '');
+              if (el.value.length >= 2 && idx < dom.macOctets.length - 1) {
+                dom.macOctets[idx + 1].focus();
+              }
+            });
+            el.addEventListener('keydown', (e) => {
+              if (e.key === 'Backspace' && el.value === '' && idx > 0) {
+                dom.macOctets[idx - 1].focus();
+              }
+            });
+          });
+        }
+      };
+
+      /* ──────────── 바코드 스캔 (카메라 / 사진) ──────────── */
+      const BarcodeScanner = {
+        stream: null,
+        detector: null,
+        scanning: false,
+        timerId: null,
+
+        isSupported() {
+          return 'BarcodeDetector' in window;
+        },
+        async getDetector() {
+          if (!this.detector) {
+            this.detector = new BarcodeDetector({ formats: BARCODE_FORMATS });
+          }
+          return this.detector;
+        },
+        setStatus(msg) {
+          dom.scannerStatus.textContent = msg;
+        },
+        async open() {
+          if (!this.isSupported()) {
+            alert('바코드 스캔은 Chrome/Edge 브라우저에서 지원됩니다.\n"사진 촬영"으로 시도해 보세요.');
+            dom.barcodePhotoInput.click();
+            return;
+          }
+          dom.scannerOverlay.classList.add('active');
+          this.setStatus('카메라 준비 중...');
+          try {
+            const videoOpts = { width: { ideal: 1280 }, height: { ideal: 720 } };
+            try {
+              this.stream = await navigator.mediaDevices.getUserMedia({
+                video: { ...videoOpts, facingMode: 'environment' },
+                audio: false,
+              });
+            } catch {
+              // 후면 카메라가 없는 PC 등에서는 기본 카메라로 대체
+              this.stream = await navigator.mediaDevices.getUserMedia({ video: videoOpts, audio: false });
+            }
+            dom.scannerVideo.srcObject = this.stream;
+            await dom.scannerVideo.play();
+            this.scanning = true;
+            this.setStatus('바코드를 화면 안에 맞춰 주세요.');
+            this.scanLoop();
+          } catch (err) {
+            this.setStatus('카메라 접근 실패: ' + err.message);
+            console.error(err);
+          }
+        },
+        close() {
+          this.scanning = false;
+          if (this.timerId) clearTimeout(this.timerId);
+          if (this.stream) {
+            this.stream.getTracks().forEach(t => t.stop());
+            this.stream = null;
+          }
+          dom.scannerVideo.srcObject = null;
+          dom.scannerOverlay.classList.remove('active');
+        },
+        async scanLoop() {
+          if (!this.scanning) return;
+          try {
+            const detector = await this.getDetector();
+            const barcodes = await detector.detect(dom.scannerVideo);
+            if (barcodes.length > 0) {
+              const text = barcodes[0].rawValue;
+              if (MacInput.applyBarcode(text)) {
+                this.setStatus('인식 완료: ' + text);
+                setTimeout(() => this.close(), 600);
+                return;
+              }
+              this.setStatus('인식했으나 형식이 맞지 않음: ' + text);
+            }
+          } catch (err) {
+            // detect 실패는 프레임마다 흔함 — 무시하고 계속 스캔
+          }
+          if (this.scanning) {
+            this.timerId = setTimeout(() => this.scanLoop(), 200);
+          }
+        },
+        async decodeFromFile(file) {
+          if (!this.isSupported()) {
+            alert('바코드 인식은 Chrome/Edge 브라우저에서 지원됩니다.');
+            return;
+          }
+          const img = new Image();
+          const url = URL.createObjectURL(file);
+          try {
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = url;
+            });
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            const detector = await this.getDetector();
+            const barcodes = await detector.detect(canvas);
+            if (barcodes.length === 0) {
+              alert('바코드를 찾지 못했습니다. 다시 촬영해 주세요.');
+              return;
+            }
+            const text = barcodes[0].rawValue;
+            if (MacInput.applyBarcode(text)) {
+              setStatus('바코드 인식: ' + text);
+            } else {
+              alert('인식했으나 형식이 맞지 않습니다: ' + text);
+            }
+          } catch (err) {
+            alert('바코드 인식 실패: ' + err.message);
+          } finally {
+            URL.revokeObjectURL(url);
+            dom.barcodePhotoInput.value = '';
+          }
+        },
+        setup() {
+          dom.scanBarcodeButton.addEventListener('click', () => this.open());
+          dom.scannerCloseButton.addEventListener('click', () => this.close());
+          dom.scannerPhotoButton.addEventListener('click', () => dom.barcodePhotoInput.click());
+          dom.barcodePhotoInput.addEventListener('change', () => {
+            const file = dom.barcodePhotoInput.files[0];
+            if (file) this.decodeFromFile(file);
+          });
+        }
+      };
+
       /* ──────────── 이벤트 리스너 등록 ──────────── */
-      document.getElementById('themeToggle').addEventListener('click', ThemeManager.toggleTheme);
-      document.getElementById('optionsSelect').addEventListener('change', () => {
+      MacInput.setupAutoAdvance();
+      BarcodeScanner.setup();
+      dom.themeToggle.addEventListener('click', ThemeManager.toggleTheme);
+      dom.optionsSelect.addEventListener('change', () => {
         LabelManager.updateParameters();
       });
-      document.getElementById('imageUpload').addEventListener('change', function () {
+      dom.imageUpload.addEventListener('change', function () {
         const file = this.files[0];
         if (file) {
           const reader = new FileReader();
@@ -997,23 +1377,24 @@
         }
       });
       // 슬라이더 이동 시 실시간 결과 갱신
-      document.getElementById('luminanceSlider').addEventListener('input', function () {
-        document.getElementById('lumVal').textContent = this.value;
+      dom.luminanceSlider.addEventListener('input', function () {
+        dom.lumVal.textContent = this.value;
         CanvasManager.displayOverlay();
       });
-      document.getElementById('redSlider').addEventListener('input', function () {
-        document.getElementById('redVal').textContent = this.value;
+      dom.redSlider.addEventListener('input', function () {
+        dom.redVal.textContent = this.value;
         CanvasManager.displayOverlay();
       });
 
-      document.getElementById('uploadButton').addEventListener('click', () => {
+      dom.uploadButton.addEventListener('click', () => {
         BLEManager.initiateConnection();
       });
-      document.getElementById('saveButton').addEventListener('click', () => {
+      dom.saveButton.addEventListener('click', () => {
         CanvasManager.saveImage();
       });
       // 페이지 로드 시 초기화
       window.onload = function () {
+        ThemeManager.syncIcon();
         LabelManager.updateParameters();
         BLEManager.checkSupport();
       };
