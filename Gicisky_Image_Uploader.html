@@ -827,6 +827,9 @@
         <label for="redSlider">빨강 임계값: <span id="redVal">170</span></label>
         <input type="range" id="redSlider" min="0" max="255" value="170">
       </div>
+      <div class="send-image">
+        <button type="button" class="btn btn-secondary" id="resetViewButton">초기 위치로 되돌리기</button>
+      </div>
     </section>
 
     <!-- 숨김 텍스트영역 (픽셀 데이터 저장) -->
@@ -915,6 +918,7 @@
         imagePhotoButton: $('imagePhotoButton'),
         imagePhotoInput: $('imagePhotoInput'),
         saveButton: $('saveButton'),
+        resetViewButton: $('resetViewButton'),
         uploadButton: $('uploadButton'),
         imageBox: $('myImage'),
         canvas: $('myCanvas'),
@@ -1362,17 +1366,26 @@
         drawImage(img) {
           dom.saveButton.disabled = false;
           this.image = img;  // 로드된 이미지를 저장합니다.
+          this.fitImageToCanvas();
+          // 이미지 렌더링(오버레이 포함)
+          this.render();
+        },
+        fitImageToCanvas() {
+          if (!this.image) return;
           const canvasW = this.canvas.width;
           const canvasH = this.canvas.height;
           // 기본 스케일은 캔버스에 꽉 차게 계산
-          const scale = Math.max(canvasW / img.width, canvasH / img.height);
+          const scale = Math.max(canvasW / this.image.width, canvasH / this.image.height);
           this.scale = scale;
-          this.newW = img.width * scale;
-          this.newH = img.height * scale;
+          this.newW = this.image.width * scale;
+          this.newH = this.image.height * scale;
           // 초기 오프셋은 중앙 정렬
           this.offsetX = (canvasW - this.newW) / 2;
           this.offsetY = (canvasH - this.newH) / 2;
-          // 이미지 렌더링(오버레이 포함)
+        },
+        resetView() {
+          if (!this.image) return;
+          this.fitImageToCanvas();
           this.render();
         },
         // render() 함수: 현재 오프셋과 스케일을 반영하여 이미지를 다시 그립니다.
@@ -2161,6 +2174,9 @@
       });
       dom.saveButton.addEventListener('click', () => {
         CanvasManager.saveImage();
+      });
+      dom.resetViewButton.addEventListener('click', () => {
+        CanvasManager.resetView();
       });
       // 페이지 로드 시 초기화
       window.onload = function () {
