@@ -433,7 +433,8 @@
     <!-- BLE 업로드 섹션 (필요 시) -->
     <div class="step-container">
       <label>4 단계 : 전자라벨에 연결하여 이미지를 업로드 하세요.</label><br>
-      <label class="info">- 전자라벨 화면/바코드의 번호(예: 92.12.78.64)를 입력하거나 바코드를 스캔하세요.</label><br>
+      <label class="info">- 전자라벨 화면/바코드의 번호(예: 92.12.78.64)를 입력하거나 스캔하세요.</label><br>
+      <label class="info">- 스캔 시 바코드 또는 라벨 하단 숫자(94.20.50.87)를 인식합니다.</label><br>
       <label class="info">- 입력한 라벨만 블루투스 선택창에 표시됩니다.</label><br>
       <label class="info">- 미입력 시 주변의 모든 전자라벨이 표시됩니다.</label>
 
@@ -492,8 +493,9 @@
     </div>
   </div>
 
-  <!-- ZXing: 1D 바코드 인식 (Chrome BarcodeDetector보다 안정적) -->
+  <!-- ZXing: 1D 바코드 시도 / Tesseract: 라벨 하단 숫자 OCR (전자라벨에 더 안정적) -->
   <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <!-- JavaScript: 기능별 모듈화 (슬라이더 오버레이 적용 및 pixelData 갱신) -->
   <script>
@@ -1213,6 +1215,12 @@
           }
           return null;
         },
+        // OCR 결과에서 xx.xx.xx.xx 패턴 추출 (전자라벨 하단 숫자)
+        parseFromOcr(text) {
+          const m = text.match(/(\d{1,2})\s*[.,:;\s]\s*(\d{1,2})\s*[.,:;\s]\s*(\d{1,2})\s*[.,:;\s]\s*(\d{1,2})/);
+          if (!m) return null;
+          return this.parseBarcode(`${m[1]}.${m[2]}.${m[3]}.${m[4]}`);
+        },
         fillOctets(octets) {
           octets.forEach((val, i) => { dom.macOctets[i].value = val; });
         },
@@ -1240,13 +1248,18 @@
         }
       };
 
-      /* ──────────── 바코드 스캔 (ZXing: 카메라 / 사진) ──────────── */
+      /* ──────────── 바코드/번호 스캔 (ZXing + OCR) ──────────── */
+      // 전자라벨 바코드는 흐린 사진에서 ZXing이 실패하는 경우가 많아,
+      // 라벨 하단 숫자(94.20.50.87) OCR을 함께 사용합니다.
       const BarcodeScanner = {
         codeReader: null,
         scanCanvas: null,
         stream: null,
         scanning: false,
         timerId: null,
+        ocrBusy: false,
+        ocrWorker: null,
+        lastOcrAt: 0,
 
         getHints() {
           const hints = new Map();
@@ -1254,13 +1267,9 @@
             ZXing.BarcodeFormat.CODE_128,
             ZXing.BarcodeFormat.CODE_39,
             ZXing.BarcodeFormat.ITF,
+            ZXing.BarcodeFormat.CODABAR,
             ZXing.BarcodeFormat.EAN_13,
             ZXing.BarcodeFormat.EAN_8,
-            ZXing.BarcodeFormat.UPC_A,
-            ZXing.BarcodeFormat.UPC_E,
-            ZXing.BarcodeFormat.CODABAR,
-            ZXing.BarcodeFormat.QR_CODE,
-            ZXing.BarcodeFormat.DATA_MATRIX,
           ]);
           hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
           return hints;
@@ -1288,7 +1297,6 @@
               return err.message || String(err);
           }
         },
-        // ZXing decodeFromVideoDevice 대신 직접 getUserMedia로 카메라를 열어 권한/충돌 문제를 줄임
         async startCamera() {
           const attempts = [
             { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
@@ -1322,13 +1330,111 @@
           this.scanCanvas.getContext('2d').drawImage(video, 0, 0);
           return this.scanCanvas;
         },
-        handleResult(text) {
+        cropCanvas(src, rect) {
+          const sw = src.width || src.naturalWidth;
+          const sh = src.height || src.naturalHeight;
+          const x = Math.round(sw * rect.x);
+          const y = Math.round(sh * rect.y);
+          const w = Math.max(1, Math.round(sw * rect.w));
+          const h = Math.max(1, Math.round(sh * rect.h));
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(src, x, y, w, h, 0, 0, w, h);
+          return canvas;
+        },
+        // 전자라벨: 바코드/번호는 화면 하단에 위치
+        getScanRegions(src, fast = false) {
+          if (fast) {
+            return [
+              this.cropCanvas(src, { x: 0.1, y: 0.72, w: 0.8, h: 0.25 }),
+              this.cropCanvas(src, { x: 0.15, y: 0.8, w: 0.7, h: 0.18 }),
+            ];
+          }
+          return [
+            this.cropCanvas(src, { x: 0.05, y: 0.55, w: 0.9, h: 0.4 }),
+            this.cropCanvas(src, { x: 0.1, y: 0.72, w: 0.8, h: 0.25 }),
+            this.cropCanvas(src, { x: 0.15, y: 0.8, w: 0.7, h: 0.18 }),
+          ];
+        },
+        buildVariants(src, fast = false) {
+          const variants = [];
+          const scales = fast ? [2, 3] : [1, 2, 3, 4];
+          const filters = fast
+            ? ['grayscale(1) contrast(3) brightness(1.1)']
+            : [
+              'grayscale(1) contrast(2.5) brightness(1.1)',
+              'grayscale(1) contrast(3.5) brightness(1.2)',
+              'contrast(2) brightness(1.1)',
+            ];
+          const sw = src.width || src.naturalWidth;
+          const sh = src.height || src.naturalHeight;
+          for (const scale of scales) {
+            for (const filter of filters) {
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.round(sw * scale);
+              canvas.height = Math.round(sh * scale);
+              const ctx = canvas.getContext('2d');
+              ctx.filter = filter;
+              ctx.imageSmoothingEnabled = scale < 2;
+              ctx.drawImage(src, 0, 0, canvas.width, canvas.height);
+              variants.push(canvas);
+            }
+          }
+          return variants;
+        },
+        handleResult(text, source) {
           if (MacInput.applyBarcode(text)) {
-            this.setStatus('인식 완료: ' + text);
+            this.setStatus(`인식 완료 (${source}): ${text}`);
             setTimeout(() => this.close(), 600);
             return true;
           }
-          this.setStatus('인식: ' + text + ' (형식 불일치)');
+          return false;
+        },
+        async getOcrWorker() {
+          if (!this.ocrWorker) {
+            this.ocrWorker = await Tesseract.createWorker('eng', 1, { logger: () => {} });
+            await this.ocrWorker.setParameters({
+              tessedit_char_whitelist: '0123456789.',
+              tessedit_pageseg_mode: '7',
+            });
+          }
+          return this.ocrWorker;
+        },
+        async tryZxing(source, fast = false) {
+          const regions = this.getScanRegions(source, fast);
+          for (const region of regions) {
+            for (const variant of this.buildVariants(region, fast)) {
+              try {
+                const result = await this.getReader().decodeFromImageElement(variant);
+                if (result && this.handleResult(result.getText(), '바코드')) return true;
+              } catch (err) {
+                if (!this.isNotFoundError(err)) console.debug('zxing:', err);
+              }
+            }
+          }
+          return false;
+        },
+        async tryOcr(source, fast = false) {
+          if (typeof Tesseract === 'undefined') return false;
+          const worker = await this.getOcrWorker();
+          const regions = this.getScanRegions(source, fast);
+          for (const region of regions) {
+            for (const variant of this.buildVariants(region, fast)) {
+              try {
+                const { data: { text } } = await worker.recognize(variant);
+                const octets = MacInput.parseFromOcr(text);
+                if (octets) {
+                  MacInput.fillOctets(octets);
+                  this.setStatus('인식 완료 (번호): ' + octets.join('.'));
+                  setTimeout(() => this.close(), 600);
+                  return true;
+                }
+              } catch (err) {
+                console.debug('ocr:', err);
+              }
+            }
+          }
           return false;
         },
         async open() {
@@ -1343,12 +1449,13 @@
           dom.scannerOverlay.classList.add('active');
           this.setStatus('카메라 준비 중...');
           this.scanning = true;
+          this.lastOcrAt = 0;
           try {
             this.stream = await this.startCamera();
             dom.scannerVideo.srcObject = this.stream;
             dom.scannerVideo.setAttribute('playsinline', '');
             await dom.scannerVideo.play();
-            this.setStatus('바코드를 가이드 안에 맞춰 주세요.');
+            this.setStatus('라벨 하단 바코드/번호를 가이드 안에 맞춰 주세요.');
             this.scanLoop();
           } catch (err) {
             this.scanning = false;
@@ -1360,56 +1467,37 @@
           if (!this.scanning) return;
           const frame = this.captureFrame();
           if (frame) {
-            try {
-              const result = await this.getReader().decodeFromImageElement(frame);
-              if (result) this.handleResult(result.getText());
-            } catch (err) {
-              // NotFoundException은 프레임마다 정상적으로 발생
-              if (!this.isNotFoundError(err)) {
-                console.debug('scan:', err);
+            const zxingHit = await this.tryZxing(frame, true);
+            if (!zxingHit) {
+              const now = Date.now();
+              if (!this.ocrBusy && now - this.lastOcrAt > 1800) {
+                this.ocrBusy = true;
+                this.lastOcrAt = now;
+                this.setStatus('번호 인식 중...');
+                await this.tryOcr(frame, true);
+                this.ocrBusy = false;
+                if (this.scanning) this.setStatus('라벨 하단 바코드/번호를 가이드 안에 맞춰 주세요.');
               }
             }
           }
           if (this.scanning) {
-            this.timerId = setTimeout(() => this.scanLoop(), 150);
+            this.timerId = setTimeout(() => this.scanLoop(), 250);
           }
         },
         close() {
           this.scanning = false;
+          this.ocrBusy = false;
           if (this.timerId) clearTimeout(this.timerId);
           if (this.stream) {
             this.stream.getTracks().forEach(t => t.stop());
             this.stream = null;
           }
           if (this.codeReader) this.codeReader.reset();
+          if (this.ocrWorker) {
+            this.ocrWorker.terminate().finally(() => { this.ocrWorker = null; });
+          }
           dom.scannerVideo.srcObject = null;
           dom.scannerOverlay.classList.remove('active');
-        },
-        // 사진 인식용: 대비/선명도 보정 이미지를 여러 장 만들어 순차 시도
-        prepareImageVariants(img) {
-          const variants = [];
-          const scales = [1, 1.5, 2];
-          const filters = [
-            null,
-            'contrast(1.8) brightness(1.1)',
-            'grayscale(1) contrast(2.5) brightness(1.2)',
-          ];
-          for (const scale of scales) {
-            for (const filter of filters) {
-              const canvas = document.createElement('canvas');
-              canvas.width = Math.round(img.naturalWidth * scale);
-              canvas.height = Math.round(img.naturalHeight * scale);
-              const ctx = canvas.getContext('2d');
-              if (filter) ctx.filter = filter;
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-              variants.push(canvas);
-            }
-          }
-          return variants;
-        },
-        async decodeImageElement(source) {
-          const reader = this.getReader();
-          return reader.decodeFromImageElement(source);
         },
         async decodeFromFile(file) {
           const url = URL.createObjectURL(file);
@@ -1420,22 +1508,18 @@
               img.onerror = reject;
               img.src = url;
             });
-            this.setStatus('바코드 분석 중...');
-            const variants = this.prepareImageVariants(img);
-            for (const variant of variants) {
-              try {
-                const result = await this.decodeImageElement(variant);
-                if (this.handleResult(result.getText())) {
-                  setStatus('바코드 인식: ' + result.getText());
-                  return;
-                }
-              } catch (e) {
-                // NotFoundException — 다음 변형 시도
-              }
+            this.setStatus('이미지 분석 중...');
+            if (await this.tryOcr(img)) {
+              setStatus('번호 인식 완료');
+              return;
             }
-            alert('바코드를 찾지 못했습니다.\n바코드가 선명하게 보이도록 다시 촬영해 주세요.');
+            if (await this.tryZxing(img)) {
+              setStatus('바코드 인식 완료');
+              return;
+            }
+            alert('바코드/번호를 찾지 못했습니다.\n라벨 하단 숫자(예: 94.20.50.87)가 선명하게 보이도록 다시 촬영해 주세요.');
           } catch (err) {
-            alert('바코드 인식 실패: ' + err.message);
+            alert('인식 실패: ' + err.message);
           } finally {
             URL.revokeObjectURL(url);
             dom.barcodePhotoInput.value = '';
