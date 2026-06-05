@@ -1299,8 +1299,14 @@
         stream: null,
         staticImage: null,
         scanning: false,
-        timerId: null,
-        upscale: 5,
+        previewTimerId: null,
+        decodeTimerId: null,
+        decodeBusy: false,
+        decodeCycle: 0,
+        sliderDecodeTimer: null,
+        upscale: 4,
+        previewIntervalMs: 80,
+        decodeIntervalMs: 700,
 
         getHints() {
           const hints = new Map();
@@ -1393,35 +1399,43 @@
         getGuideRegion(src) {
           return this.cropCanvas(src, { x: 0.1, y: 0.2, w: 0.8, h: 0.6 });
         },
-        // 크롭 → 확대 → 임계값 이진화 → 미리보기 캔버스에 표시
-        renderToCanvas(src, threshold, invert = false, grayscaleOnly = false) {
+        // 크롭 → 확대 → 이진화 → 미리보기 캔버스에 직접 그리기 (가벼움)
+        renderToPreview(src, threshold, invert = false) {
           const sw = src.width || src.naturalWidth;
           const sh = src.height || src.naturalHeight;
-          const w = Math.max(1, Math.round(sw * this.upscale));
-          const h = Math.max(1, Math.round(sh * this.upscale));
-          const canvas = document.createElement('canvas');
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
+          const maxDim = 640;
+          const scale = Math.min(this.upscale, maxDim / Math.max(sw, sh));
+          const w = Math.max(1, Math.round(sw * scale));
+          const h = Math.max(1, Math.round(sh * scale));
+          const preview = dom.scannerPreview;
+          preview.width = w;
+          preview.height = h;
+          const ctx = preview.getContext('2d', { willReadFrequently: true });
           ctx.imageSmoothingEnabled = false;
           ctx.drawImage(src, 0, 0, w, h);
           const imageData = ctx.getImageData(0, 0, w, h);
           const data = imageData.data;
           for (let i = 0; i < data.length; i += 4) {
             const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-            let v = grayscaleOnly ? lum : (lum < threshold ? 0 : 255);
-            if (invert && !grayscaleOnly) v = 255 - v;
+            let v = lum < threshold ? 0 : 255;
+            if (invert) v = 255 - v;
             data[i] = data[i + 1] = data[i + 2] = v;
             data[i + 3] = 255;
           }
           ctx.putImageData(imageData, 0, 0);
-          return canvas;
+          return preview;
         },
-        showPreview(canvas) {
-          const preview = dom.scannerPreview;
-          preview.width = canvas.width;
-          preview.height = canvas.height;
-          preview.getContext('2d').drawImage(canvas, 0, 0);
+        invertPreviewCanvas(canvas) {
+          const ctx = canvas.getContext('2d');
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = 255 - data[i];
+            data[i + 1] = 255 - data[i + 1];
+            data[i + 2] = 255 - data[i + 2];
+          }
+          ctx.putImageData(imageData, 0, 0);
+          return canvas;
         },
         // ZXing 저수준 API (이미 이진화된 이미지에 더 안정적)
         decodeWithZxing(canvas) {
@@ -1459,11 +1473,6 @@
             });
           });
         },
-        async decodeCanvas(canvas) {
-          const zxingText = this.decodeWithZxing(canvas);
-          if (zxingText) return zxingText;
-          return await this.decodeWithQuagga(canvas);
-        },
         handleResult(text) {
           if (MacInput.applyBarcode(text)) {
             this.setStatus('인식 완료: ' + text);
@@ -1473,26 +1482,95 @@
           this.setStatus('바코드 읽음: ' + text + ' (번호 형식 아님)');
           return false;
         },
-        async tryDecode(source) {
+        getCurrentSource() {
+          return this.staticImage || this.captureFrame();
+        },
+        updatePreviewFrame() {
+          const source = this.getCurrentSource();
+          if (!source) return null;
+          const region = this.getGuideRegion(source);
+          return this.renderToPreview(region, this.getThreshold());
+        },
+        // 무거운 바코드 인식 (미리보기와 분리 — UI 멈춤 방지)
+        async runDecode() {
+          await new Promise(r => setTimeout(r, 0));
+          const preview = dom.scannerPreview;
+          if (!preview.width) this.updatePreviewFrame();
+          if (!preview.width) return;
+
+          let text = this.decodeWithZxing(preview);
+          if (!text) {
+            const copy = document.createElement('canvas');
+            copy.width = preview.width;
+            copy.height = preview.height;
+            copy.getContext('2d').drawImage(preview, 0, 0);
+            text = this.decodeWithZxing(this.invertPreviewCanvas(copy));
+          }
+          await new Promise(r => setTimeout(r, 0));
+          if (!text && this.decodeCycle % 4 === 0) {
+            text = await this.decodeWithQuagga(preview);
+          }
+          this.decodeCycle++;
+          if (text) this.handleResult(text);
+        },
+        // 사진 촬영 시에만 여러 변형을 시도
+        async runDecodeFull(source) {
           const region = this.getGuideRegion(source);
           const threshold = this.getThreshold();
           const barcodeStrip = this.cropCanvas(region, { x: 0, y: 0.35, w: 1, h: 0.65 });
-
-          const attempts = [
-            this.renderToCanvas(region, threshold, false, false),
-            this.renderToCanvas(barcodeStrip, threshold, false, false),
-            this.renderToCanvas(region, threshold, true, false),
-            this.renderToCanvas(barcodeStrip, threshold, true, false),
-            this.renderToCanvas(region, threshold, false, true),
+          const variants = [
+            () => this.renderToPreview(region, threshold),
+            () => this.renderToPreview(barcodeStrip, threshold),
+            () => {
+              const base = this.renderToPreview(region, threshold);
+              const copy = document.createElement('canvas');
+              copy.width = base.width;
+              copy.height = base.height;
+              copy.getContext('2d').drawImage(base, 0, 0);
+              return this.invertPreviewCanvas(copy);
+            },
           ];
-
-          this.showPreview(attempts[0]);
-
-          for (const canvas of attempts) {
-            const text = await this.decodeCanvas(canvas);
+          for (const make of variants) {
+            const canvas = make();
+            let text = this.decodeWithZxing(canvas);
+            if (!text) text = await this.decodeWithQuagga(canvas);
             if (text && this.handleResult(text)) return true;
           }
           return false;
+        },
+        previewLoop() {
+          if (!this.scanning) return;
+          this.updatePreviewFrame();
+          this.previewTimerId = setTimeout(() => this.previewLoop(), this.previewIntervalMs);
+        },
+        scheduleDecode() {
+          if (!this.scanning) return;
+          if (this.decodeBusy) {
+            this.decodeTimerId = setTimeout(() => this.scheduleDecode(), 300);
+            return;
+          }
+          this.decodeBusy = true;
+          this.runDecode()
+            .catch(err => console.debug('decode:', err))
+            .finally(() => {
+              this.decodeBusy = false;
+              if (this.scanning) {
+                this.decodeTimerId = setTimeout(() => this.scheduleDecode(), this.decodeIntervalMs);
+              }
+            });
+        },
+        startLoops() {
+          this.previewLoop();
+          this.scheduleDecode();
+        },
+        stopLoops() {
+          if (this.previewTimerId) clearTimeout(this.previewTimerId);
+          if (this.decodeTimerId) clearTimeout(this.decodeTimerId);
+          if (this.sliderDecodeTimer) clearTimeout(this.sliderDecodeTimer);
+          this.previewTimerId = null;
+          this.decodeTimerId = null;
+          this.sliderDecodeTimer = null;
+          this.decodeBusy = false;
         },
         stopCamera() {
           if (this.stream) {
@@ -1520,30 +1598,18 @@
             dom.scannerVideo.setAttribute('playsinline', '');
             await dom.scannerVideo.play();
             this.setStatus('바코드를 가이드 안에 맞추고 임계값을 조절하세요.');
-            this.scanLoop();
+            this.decodeCycle = 0;
+            this.startLoops();
           } catch (err) {
             this.scanning = false;
             this.setStatus('카메라 접근 실패: ' + this.formatCameraError(err));
             console.error(err);
           }
         },
-        async scanLoop() {
-          if (!this.scanning) return;
-          const source = this.staticImage || this.captureFrame();
-          if (source) {
-            const hit = await this.tryDecode(source);
-            if (!hit && this.scanning) {
-              this.setStatus('바코드를 가이드 안에 맞추고 임계값을 조절하세요.');
-            }
-          }
-          if (this.scanning) {
-            this.timerId = setTimeout(() => this.scanLoop(), 200);
-          }
-        },
         close() {
           this.scanning = false;
           this.staticImage = null;
-          if (this.timerId) clearTimeout(this.timerId);
+          this.stopLoops();
           this.stopCamera();
           dom.scannerOverlay.classList.remove('active');
         },
@@ -1559,7 +1625,8 @@
             this.stopCamera();
             this.staticImage = img;
             this.setStatus('사진 분석 중... 임계값을 조절하세요.');
-            if (!(await this.tryDecode(img))) {
+            this.renderToPreview(this.getGuideRegion(img), this.getThreshold());
+            if (!(await this.runDecodeFull(img))) {
               this.setStatus('바코드 미인식 — 임계값을 조절해 보세요.');
             }
           } catch (err) {
@@ -1575,9 +1642,13 @@
           dom.scannerPhotoButton.addEventListener('click', () => dom.barcodePhotoInput.click());
           dom.thresholdSlider.addEventListener('input', () => {
             dom.thresholdVal.textContent = dom.thresholdSlider.value;
-            if (this.scanning) {
-              const source = this.staticImage || this.captureFrame();
-              if (source) this.tryDecode(source);
+            if (!this.scanning) return;
+            this.updatePreviewFrame();
+            if (this.staticImage) {
+              clearTimeout(this.sliderDecodeTimer);
+              this.sliderDecodeTimer = setTimeout(() => {
+                this.runDecodeFull(this.staticImage);
+              }, 400);
             }
           });
           dom.barcodePhotoInput.addEventListener('change', () => {
