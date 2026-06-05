@@ -1269,6 +1269,7 @@
         scanning: false,
         timerId: null,
         ocrBusy: false,
+        ocrScanning: false,
         ocrWorker: null,
         ocrReady: false,
         lastOcrAt: 0,
@@ -1295,6 +1296,8 @@
           return this.codeReader;
         },
         setStatus(msg) {
+          // OCR 진행 중에는 "번호 인식 중..." 메시지가 다른 로직에 덮이지 않도록 보호
+          if (this.ocrScanning && !msg.startsWith('번호 인식') && !msg.startsWith('인식 완료')) return;
           dom.scannerStatus.textContent = msg;
         },
         formatCameraError(err) {
@@ -1465,7 +1468,7 @@
           if (!this.ocrWorker) {
             this.ocrWorker = await Tesseract.createWorker('eng', 1, {
               logger: (m) => {
-                if (m.status === 'loading tesseract core' || m.status === 'initializing tesseract') {
+                if (!this.ocrReady && (m.status === 'loading tesseract core' || m.status === 'initializing tesseract')) {
                   this.setStatus('인식 엔진 로딩 중...');
                 }
               },
@@ -1503,18 +1506,24 @@
           if (typeof Tesseract === 'undefined') return false;
           const worker = await this.getOcrWorker();
           const attempts = live ? this.buildOcrAttemptsLive(source) : this.buildOcrAttempts(source);
-          for (const canvas of attempts) {
-            try {
-              const hit = await this.recognizeNumber(worker, canvas);
-              if (hit) {
-                MacInput.fillOctets(hit.octets);
-                this.setStatus('인식 완료 (번호): ' + hit.octets.join('.'));
-                setTimeout(() => this.close(), 600);
-                return true;
+          this.ocrScanning = true;
+          try {
+            for (let i = 0; i < attempts.length; i++) {
+              this.setStatus(`번호 인식 중... (${i + 1}/${attempts.length})`);
+              try {
+                const hit = await this.recognizeNumber(worker, attempts[i]);
+                if (hit) {
+                  MacInput.fillOctets(hit.octets);
+                  this.setStatus('인식 완료 (번호): ' + hit.octets.join('.'));
+                  setTimeout(() => this.close(), 600);
+                  return true;
+                }
+              } catch (err) {
+                console.debug('ocr:', err);
               }
-            } catch (err) {
-              console.debug('ocr:', err);
             }
+          } finally {
+            this.ocrScanning = false;
           }
           return false;
         },
@@ -1552,6 +1561,11 @@
         },
         async scanLoop() {
           if (!this.scanning) return;
+          // OCR 진행 중에는 상태 메시지를 유지하고 다음 루프만 예약
+          if (this.ocrBusy) {
+            this.timerId = setTimeout(() => this.scanLoop(), 300);
+            return;
+          }
           const frame = this.captureFrame();
           if (frame) {
             this.frameCount++;
@@ -1562,10 +1576,9 @@
               }
             }
             const now = Date.now();
-            if (!this.ocrBusy && now - this.lastOcrAt > 2200) {
+            if (now - this.lastOcrAt > 2200) {
               this.ocrBusy = true;
               this.lastOcrAt = now;
-              this.setStatus('번호 인식 중...');
               const hit = await this.tryOcr(frame, true);
               this.ocrBusy = false;
               if (!hit && this.scanning) {
@@ -1581,6 +1594,7 @@
         close() {
           this.scanning = false;
           this.ocrBusy = false;
+          this.ocrScanning = false;
           if (this.timerId) clearTimeout(this.timerId);
           if (this.stream) {
             this.stream.getTracks().forEach(t => t.stop());
