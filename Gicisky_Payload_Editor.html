@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gicisky Payload Layout Editor</title>
+  <title>Gicisky Payload Layout Editor (imagespec)</title>
   <style>
     * {
       margin: 0;
@@ -341,6 +341,10 @@
     #yaml-output {
       flex: 1;
       min-height: 0;
+      width: 100%;
+      border: none;
+      outline: none;
+      resize: vertical;
       overflow: auto;
       padding: 10px 16px;
       font-family: 'Fira Code', 'Cascadia Code', monospace;
@@ -399,7 +403,7 @@
 <body>
 
   <div class="header">
-    <h1>⬡ Gicisky Layout Editor</h1>
+    <h1>⬡ Gicisky Layout Editor <span style="font-size:11px;color:var(--text2)">imagespec</span></h1>
     <div class="separator"></div>
     <label>Device</label>
     <select id="deviceSelect">
@@ -444,6 +448,13 @@
     <button class="btn" onclick="addElement('rectangle_pattern')">⊞ Pattern</button>
     <button class="btn" onclick="addElement('diagram')">📊 Diagram</button>
     <button class="btn" onclick="addElement('plot')">📈 Plot</button>
+    <button class="btn" onclick="addElement('battery')">🔋 Battery</button>
+    <button class="btn" onclick="addElement('gauge')">◔ Gauge</button>
+    <button class="btn" onclick="addElement('pie')">🥧 Pie</button>
+    <button class="btn" onclick="addElement('sparkline')">〰 Spark</button>
+    <button class="btn" onclick="addElement('text_fit')">📐 TextFit</button>
+    <button class="btn" onclick="addElement('row')">↔ Row</button>
+    <button class="btn" onclick="addElement('column')">↕ Column</button>
   </div>
 
   <div class="main">
@@ -466,21 +477,25 @@
 
   <div class="yaml-wrap">
     <div class="yaml-header">
-      <h2>📄 YAML Output</h2>
-      <button class="btn copy" onclick="copyYaml()">📋 Copy</button>
+      <h2>📄 YAML Output / Input</h2>
+      <div>
+        <button class="btn" onclick="importYaml()" title="Paste YAML below and click Import">📥 Import</button>
+        <button class="btn copy" onclick="copyYaml()">📋 Copy</button>
+      </div>
     </div>
-    <div id="yaml-output">action: gicisky.write
-      data:
-      payload: []
-      target:
-      device_id: &lt;your device&gt;</div>
+    <textarea id="yaml-output" spellcheck="false">action: gicisky.write
+data:
+  payload: []
+target:
+  device_id: &lt;your device&gt;</textarea>
   </div>
 
   <div class="coord-tooltip" id="coordTooltip"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
   <script>
     // === STATE ===
-    const EDITOR_VERSION = '2026.02.12';
+    const EDITOR_VERSION = '260701';
     const DPI_SCALE = 300 / 25.4; // 11.81 px/mm
     let elements = [];
     let selectedId = null;
@@ -494,8 +509,11 @@
     const ctx = canvas.getContext('2d');
     const tooltip = document.getElementById('coordTooltip');
 
-    const COLORS = { white: '#ffffff', black: '#000000', red: '#ff0000', yellow: '#ffff00' };
+    const COLORS = { white: '#ffffff', black: '#000000', red: '#ff0000', yellow: '#ffff00', blue: '#0000ff', green: '#008000', orange: '#ff8800' };
     const resolveColor = c => COLORS[c] || c || '#000000';
+    const LAYOUT_TYPES = new Set(['row', 'column', 'stack', 'group']);
+    const EDITOR_ONLY_PROPS = new Set(['visible', '_children']);
+    const IMAGESPEC_DOC = 'https://github.com/eigger/imagespec/blob/main/docs/authoring.md';
 
     // === QR CODE HELPERS ===
     // Approx capacities for Byte mode, ECC High (30%)
@@ -511,6 +529,32 @@
         if (len <= QR_CAPACITIES[v]) { ver = v; break; }
       }
       return 21 + (ver - 1) * 4;
+    }
+    function getQRSize(p) {
+      if (p.width && p.height) return { w: p.width, h: p.height };
+      if (p.width) return { w: p.width, h: p.width };
+      const bs = p.boxsize || 2;
+      const bd = p.border === undefined ? 1 : p.border;
+      const mods = getQRModuleCount(p.data);
+      const s = bs * (mods + 2 * bd);
+      return { w: s, h: s };
+    }
+    function parsePieValues(s) {
+      return String(s || '').split(';').filter(Boolean).map(part => {
+        const bits = part.split(',').map(x => x.trim());
+        return { label: bits[0] || '', value: parseFloat(bits[1]) || 0, color: bits[2] || 'black' };
+      });
+    }
+    function parseSparklineValues(s) {
+      if (Array.isArray(s)) return s.map(Number);
+      return String(s || '').split(',').map(x => parseFloat(x.trim())).filter(n => !isNaN(n));
+    }
+    function yamlQuote(val) {
+      if (typeof val !== 'string') return val;
+      if (val.includes(':') || val.includes('#') || val.includes('{') || val.includes('"') || val.includes("'") || val.match(/^\s/) || val === '' || val.includes(',')) {
+        return `"${val.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+      }
+      return val;
     }
 
     // Match python-barcode BaseWriter.calculate_size() and ImageWriter dpi=300 (mm2px)
@@ -528,6 +572,9 @@
       return 11 * len + 35;
     }
     function getBarcodeSize(p) {
+      if (p.width && p.height) return { w: p.width, h: p.height };
+      if (p.width) return { w: p.width, h: p.height || Math.max(24, Math.round(p.width * 0.28)) };
+      if (p.height) return { w: p.width || 160, h: p.height };
       const len = String(p.data).length;
       const code = (p.code || 'code128').toLowerCase();
       const mods = code === 'code128' ? getCode128Modules(p.data) : (11 * len + 35);
@@ -568,49 +615,61 @@
     const ELEMENT_DEFAULTS = {
       text: { x: 10, y: 10, value: 'Text', size: 20, color: 'black', font: '', anchor: 'lt', align: 'left', spacing: 5, stroke_width: 0, stroke_fill: 'white', max_width: 0, y_padding: 10, visible: true },
       multiline: { x: 10, value: 'Line1;Line2', delimiter: ';', offset_y: 25, start_y: 10, size: 20, font: '', color: 'black', anchor: 'lm', stroke_width: 0, stroke_fill: 'white', y_padding: 10, visible: true },
-      line: { x_start: 10, x_end: 200, y_start: 64, y_end: 64, fill: 'black', width: 1, y_padding: 0, visible: true },
+      text_fit: { x: 10, y: 10, width: 200, height: 40, value: 'Fits in box', size: 20, min_size: 8, fit: 'shrink', color: 'black', visible: true },
+      line: { x_start: 10, x_end: 200, y_start: 64, y_end: 64, fill: 'black', width: 1, dash: '', y_padding: 0, visible: true },
       rectangle: { x_start: 10, y_start: 10, x_end: 100, y_end: 60, fill: '', outline: 'black', width: 1, radius: 0, corners: '', visible: true },
       rectangle_pattern: { x_start: 10, y_start: 10, x_size: 20, y_size: 20, x_repeat: 3, y_repeat: 2, x_offset: 5, y_offset: 5, fill: '', outline: 'black', width: 1, radius: 0, corners: '', visible: true },
       circle: { x: 60, y: 60, radius: 30, fill: '', outline: 'black', width: 1, visible: true },
       ellipse: { x_start: 10, y_start: 10, x_end: 100, y_end: 60, fill: '', outline: 'black', width: 1, visible: true },
-      icon: { x: 10, y: 10, value: 'home', size: 32, color: 'black', anchor: 'la', stroke_width: 0, stroke_fill: 'white', visible: true },
-      dlimg: { x: 10, y: 10, url: '', xsize: 80, ysize: 80, rotate: 0, visible: true },
-      qrcode: { x: 10, y: 10, data: 'https://home-assistant.io', color: 'black', bgcolor: 'white', border: 1, boxsize: 2, visible: true },
-      barcode: { x: 10, y: 10, data: '123456', code: 'code128', color: 'black', bgcolor: 'white', module_width: 0.2, module_height: 7, quiet_zone: 6.5, font_size: 5, text_distance: 5.0, write_text: true, visible: true },
-      progress_bar: { x_start: 10, y_start: 90, x_end: 200, y_end: 110, progress: 75, direction: 'right', background: 'white', fill: 'red', outline: 'black', width: 1, show_percentage: false, visible: true },
+      icon: { x: 10, y: 10, value: 'mdi:home', size: 32, color: 'black', anchor: 'la', stroke_width: 0, stroke_fill: 'white', visible: true },
+      dlimg: { x: 10, y: 10, url: '', xsize: 80, ysize: 80, mode: 'stretch', rotate: 0, visible: true },
+      qrcode: { x: 10, y: 10, data: 'https://home-assistant.io', width: 80, height: 80, eclevel: 'h', color: 'black', bgcolor: 'white', border: 1, boxsize: 2, visible: true },
+      barcode: { x: 10, y: 10, data: '1234567890', code: 'code128', width: 160, height: 40, color: 'black', bgcolor: 'white', write_text: false, module_width: 0.2, module_height: 7, quiet_zone: 6.5, font_size: 5, text_distance: 5.0, visible: true },
+      progress_bar: { x_start: 10, y_start: 90, x_end: 200, y_end: 110, progress: 75, direction: 'right', background: 'white', fill: 'red', outline: 'black', width: 1, radius: 0, show_percentage: false, visible: true },
+      battery: { x: 10, y: 10, width: 34, height: 16, level: 72, fill: 'black', background: 'white', outline: 'black', low_threshold: 20, low_color: 'red', show_percentage: false, visible: true },
+      gauge: { x: 60, y: 60, radius: 28, progress: 65, fill: 'red', outline: 'black', width: 6, visible: true },
+      pie: { x: 120, y: 60, radius: 40, values: 'A,40,red;B,35,black;C,25,blue', inner_radius: 0, visible: true },
+      sparkline: { x: 10, y: 80, width: 180, height: 40, values: '1,3,2,5,4,6,3,7', color: 'black', fill: 'red', dot_last: true, visible: true },
+      row: { x: 8, y: 8, gap: 8, class: 'gap-2 items-center', width: 200, height: 36, _children: [{ type: 'icon', props: { value: 'mdi:home', size: 18, color: 'black' } }, { type: 'text', props: { value: 'Label', size: 16, color: 'black' } }], visible: true },
+      column: { x: 8, y: 8, gap: 4, class: 'gap-1', width: 160, height: 80, _children: [{ type: 'text', props: { value: 'Line 1', size: 16, color: 'black' } }, { type: 'text', props: { value: 'Line 2', size: 16, color: 'black' } }], visible: true },
       diagram: { x: 10, y: 10, width: 200, height: 100, margin: 20, font: '', bars_values: 'A,10;B,20;C,15', bars_color: 'black', bars_margin: 10, bars_legend_size: 10, bars_legend_color: 'black', visible: true },
       plot: { data_entity: 'sensor.temperature', data_color: 'black', data_width: 2, duration: 86400, x_start: 10, y_start: 10, x_end: 200, y_end: 100, size: 10, font: '', low: '', high: '', debug: false, visible: true }
     };
 
-    // Required fields per type
     const REQUIRED = {
-      text: ['x', 'value'], multiline: ['x', 'value', 'delimiter', 'offset_y'],
+      text: ['x', 'value'], multiline: ['x', 'value', 'delimiter', 'offset_y'], text_fit: ['x', 'y', 'width', 'height', 'value'],
       line: ['x_start', 'x_end'], rectangle: ['x_start', 'x_end', 'y_start', 'y_end'],
       rectangle_pattern: ['x_start', 'y_start', 'x_size', 'y_size', 'x_repeat', 'y_repeat', 'x_offset', 'y_offset'],
       circle: ['x', 'y', 'radius'], ellipse: ['x_start', 'x_end', 'y_start', 'y_end'],
       icon: ['x', 'y', 'value', 'size'], dlimg: ['x', 'y', 'url', 'xsize', 'ysize'],
       qrcode: ['x', 'y', 'data'], barcode: ['x', 'y', 'data'],
       progress_bar: ['x_start', 'x_end', 'y_start', 'y_end', 'progress'],
+      battery: ['x', 'y', 'width', 'height', 'level'], gauge: ['x', 'y', 'radius', 'progress'],
+      pie: ['x', 'y', 'radius', 'values'], sparkline: ['x', 'y', 'width', 'height', 'values'],
+      row: ['_children'], column: ['_children'],
       diagram: ['x', 'y', 'height'], plot: ['data_entity']
     };
 
-    // Field display names and types
     const FIELD_META = {
-      x: { t: 'num' }, y: { t: 'num' }, value: { t: 'str' }, size: { t: 'num' }, color: { t: 'color_sel' }, font: { t: 'str' },
+      x: { t: 'num' }, y: { t: 'num' }, value: { t: 'str' }, values: { t: 'str' }, size: { t: 'num' }, color: { t: 'color_sel' }, font: { t: 'str' },
       anchor: { t: 'sel', opts: ['lt', 'mt', 'rt', 'lm', 'mm', 'rm', 'lb', 'mb', 'rb', 'la'] },
       align: { t: 'sel', opts: ['left', 'center', 'right'] }, spacing: { t: 'num' }, stroke_width: { t: 'num' },
       stroke_fill: { t: 'color_sel' }, max_width: { t: 'num' }, y_padding: { t: 'num' }, visible: { t: 'bool' },
       delimiter: { t: 'str' }, offset_y: { t: 'num' }, start_y: { t: 'num' },
+      min_size: { t: 'num' }, fit: { t: 'sel', opts: ['shrink', 'ellipsis', 'shrink_ellipsis'] },
       x_start: { t: 'num' }, x_end: { t: 'num' }, y_start: { t: 'num' }, y_end: { t: 'num' },
-      fill: { t: 'color_sel' }, outline: { t: 'color_sel' }, width: { t: 'num' }, radius: { t: 'num' }, corners: { t: 'str' },
+      fill: { t: 'color_sel' }, outline: { t: 'color_sel' }, width: { t: 'num' }, radius: { t: 'num' }, corners: { t: 'str' }, dash: { t: 'str' },
       x_size: { t: 'num' }, y_size: { t: 'num' }, x_repeat: { t: 'num' }, y_repeat: { t: 'num' }, x_offset: { t: 'num' }, y_offset: { t: 'num' },
-      url: { t: 'str' }, xsize: { t: 'num' }, ysize: { t: 'num' }, rotate: { t: 'num' },
-      data: { t: 'str' }, bgcolor: { t: 'color_sel' }, border: { t: 'num' }, boxsize: { t: 'num' },
+      url: { t: 'str' }, xsize: { t: 'num' }, ysize: { t: 'num' }, mode: { t: 'sel', opts: ['stretch', 'fit', 'fill', 'contain'] }, rotate: { t: 'num' },
+      data: { t: 'str' }, bgcolor: { t: 'color_sel' }, border: { t: 'num' }, boxsize: { t: 'num' }, eclevel: { t: 'sel', opts: ['l', 'm', 'q', 'h'] },
       code: { t: 'sel', opts: ['code128', 'ean13', 'ean8', 'upc', 'isbn13'] },
       module_width: { t: 'num' }, module_height: { t: 'num' }, quiet_zone: { t: 'num' }, font_size: { t: 'num' },
       text_distance: { t: 'num' }, write_text: { t: 'bool' },
       progress: { t: 'num' }, direction: { t: 'sel', opts: ['right', 'left', 'up', 'down'] },
       background: { t: 'color_sel' }, show_percentage: { t: 'bool' },
+      level: { t: 'num' }, low_threshold: { t: 'num' }, low_color: { t: 'color_sel' },
+      inner_radius: { t: 'num' }, dot_last: { t: 'bool' },
+      gap: { t: 'num' }, class: { t: 'str' },
       height: { t: 'num' }, margin: { t: 'num' },
       bars_values: { t: 'str' }, bars_color: { t: 'color_sel' }, bars_margin: { t: 'num' }, bars_legend_size: { t: 'num' }, bars_legend_color: { t: 'color_sel' },
       data_entity: { t: 'str' }, data_color: { t: 'color_sel' }, data_width: { t: 'num' },
@@ -733,9 +792,15 @@
           return { x: p.x + ox, y: p.y + oy, w: p.size, h: p.size };
         }
         case 'dlimg': return { x: p.x, y: p.y, w: p.xsize, h: p.ysize };
-        case 'qrcode': { const bs = (p.boxsize || 2); const bd = (p.border === undefined ? 1 : p.border); const mods = getQRModuleCount(p.data); const s = bs * (mods + 2 * bd); return { x: p.x, y: p.y, w: s, h: s }; }
+        case 'qrcode': { const sz = getQRSize(p); return { x: p.x, y: p.y, w: sz.w, h: sz.h }; }
         case 'barcode': { const sz = getBarcodeSize(p); return { x: p.x, y: p.y, w: sz.w, h: sz.h }; }
         case 'progress_bar': return { x: p.x_start, y: p.y_start, w: p.x_end - p.x_start, h: p.y_end - p.y_start };
+        case 'battery': return { x: p.x, y: p.y, w: p.width, h: p.height };
+        case 'gauge': return { x: p.x - p.radius, y: p.y - p.radius, w: p.radius * 2, h: p.radius * 2 };
+        case 'pie': return { x: p.x - p.radius, y: p.y - p.radius, w: p.radius * 2, h: p.radius * 2 };
+        case 'sparkline': return { x: p.x, y: p.y, w: p.width, h: p.height };
+        case 'text_fit': return { x: p.x, y: p.y, w: p.width, h: p.height };
+        case 'row': case 'column': case 'stack': case 'group': return { x: p.x || 0, y: p.y || 0, w: p.width || 120, h: p.height || 40 };
         case 'diagram': return { x: p.x, y: p.y, w: p.width || canvasW, h: p.height };
         case 'plot': return { x: p.x_start || 0, y: p.y_start || 0, w: (p.x_end || canvasW) - (p.x_start || 0), h: (p.y_end || canvasH) - (p.y_start || 0) };
         default: return { x: 0, y: 0, w: 50, h: 50 };
@@ -920,63 +985,30 @@
           break;
         }
         case 'qrcode': {
-          const bs = p.boxsize || 2;
-          const bd = p.border === undefined ? 4 : p.border;
-          const mods = getQRModuleCount(p.data);
-          const s = bs * (mods + 2 * bd);
+          const sz = getQRSize(p);
+          const s = Math.min(sz.w, sz.h);
           ctx.fillStyle = resolveColor(p.bgcolor); ctx.fillRect(p.x, p.y, s, s);
           ctx.fillStyle = resolveColor(p.color);
-          // Simple QR pattern preview
-          // Draw patterns at corners based on modules size
-          // Top-left
-          ctx.fillRect(p.x + bd * bs, p.y + bd * bs, 7 * bs, 7 * bs);
-          ctx.clearRect(p.x + (bd + 1) * bs, p.y + (bd + 1) * bs, 5 * bs, 5 * bs);
-          ctx.fillRect(p.x + (bd + 2) * bs, p.y + (bd + 2) * bs, 3 * bs, 3 * bs);
-          // Top-right
-          ctx.fillRect(p.x + (bd + mods - 7) * bs, p.y + bd * bs, 7 * bs, 7 * bs);
-          ctx.clearRect(p.x + (bd + mods - 6) * bs, p.y + (bd + 1) * bs, 5 * bs, 5 * bs);
-          ctx.fillRect(p.x + (bd + mods - 5) * bs, p.y + (bd + 2) * bs, 3 * bs, 3 * bs);
-          // Bottom-left
-          ctx.fillRect(p.x + bd * bs, p.y + (bd + mods - 7) * bs, 7 * bs, 7 * bs);
-          ctx.clearRect(p.x + (bd + 1) * bs, p.y + (bd + mods - 6) * bs, 5 * bs, 5 * bs);
-          ctx.fillRect(p.x + (bd + 2) * bs, p.y + (bd + mods - 5) * bs, 3 * bs, 3 * bs);
-
-          ctx.font = '8px sans-serif'; ctx.textBaseline = 'bottom'; ctx.fillText('QR V' + ((mods - 21) / 4 + 1), p.x + 2, p.y + s - 2);
+          const bs = Math.max(1, Math.floor(s / 25));
+          ctx.fillRect(p.x + bs * 2, p.y + bs * 2, 7 * bs, 7 * bs);
+          ctx.clearRect(p.x + bs * 3, p.y + bs * 3, 5 * bs, 5 * bs);
+          ctx.fillRect(p.x + bs * 4, p.y + bs * 4, 3 * bs, 3 * bs);
+          ctx.font = '8px sans-serif'; ctx.textBaseline = 'bottom'; ctx.fillText('QR', p.x + 2, p.y + s - 2);
           break;
         }
         case 'barcode': {
           const sz = getBarcodeSize(p);
           ctx.fillStyle = resolveColor(p.bgcolor ?? 'white'); ctx.fillRect(p.x, p.y, sz.w, sz.h);
           ctx.fillStyle = resolveColor(p.color ?? 'black');
-          // Match python-barcode ImageWriter: margin_top=1mm, then bars, then text_distance, then text (pt2mm(font_size) for layout)
-          const qzPx = (p.quiet_zone ?? 6.5) * DPI_SCALE;
-          const barW = sz.w - 2 * qzPx;
-          const barH = (p.module_height ?? 7) * DPI_SCALE;
-          const marginTopPx = 1 * DPI_SCALE;
-
-          if (barW > 0) {
-            const numBars = 40;
-            const step = barW / numBars;
-            for (let i = 0; i < numBars; i++) {
-              if ((i * 7 + 3) % 5 < 3) ctx.fillRect(p.x + qzPx + i * step, p.y + marginTopPx, step * 0.6, barH);
-            }
+          const barH = p.write_text === false ? sz.h - 4 : Math.round(sz.h * 0.65);
+          const numBars = 40;
+          const step = (sz.w - 8) / numBars;
+          for (let i = 0; i < numBars; i++) {
+            if ((i * 7 + 3) % 5 < 3) ctx.fillRect(p.x + 4 + i * step, p.y + 2, step * 0.6, barH);
           }
-
           if (p.write_text !== false) {
-            const fs = p.font_size ?? 5;
-            const fsPx = Math.max(1, Math.round(PT_TO_MM * fs * DPI_SCALE));
-            const rawTextDistPx = (p.text_distance ?? 5) * DPI_SCALE;
-            const barBottomY = p.y + marginTopPx + barH;
-            ctx.font = `${fsPx}px sans-serif`;
-            ctx.textAlign = 'center';
-            if (rawTextDistPx <= 0) {
-              ctx.textBaseline = 'bottom';
-              ctx.fillText(String(p.data), p.x + sz.w / 2, barBottomY);
-            } else {
-              const textCenterY = barBottomY + rawTextDistPx * 0.5;
-              ctx.textBaseline = 'middle';
-              ctx.fillText(String(p.data), p.x + sz.w / 2, textCenterY);
-            }
+            ctx.font = '9px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+            ctx.fillText(String(p.data), p.x + sz.w / 2, p.y + sz.h - 2);
             ctx.textAlign = 'left'; ctx.textBaseline = 'top';
           }
           break;
@@ -992,6 +1024,89 @@
           else ctx.fillRect(p.x_start, p.y_start, w, h * prog);
           ctx.strokeStyle = resolveColor(p.outline); ctx.lineWidth = p.width; ctx.strokeRect(p.x_start, p.y_start, w, h);
           if (p.show_percentage) { ctx.fillStyle = prog > 0.5 ? resolveColor(p.background) : resolveColor(p.fill); ctx.font = `${Math.min(h - 4, 14)}px sans-serif`; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.fillText(`${p.progress}%`, (p.x_start + p.x_end) / 2, (p.y_start + p.y_end) / 2); ctx.textAlign = 'left'; }
+          break;
+        }
+        case 'battery': {
+          const pad = 2;
+          const bodyW = Math.max(8, p.width - pad * 3);
+          ctx.strokeStyle = resolveColor(p.outline || 'black'); ctx.lineWidth = 1;
+          ctx.strokeRect(p.x, p.y, bodyW, p.height);
+          ctx.fillStyle = resolveColor(p.background || 'white'); ctx.fillRect(p.x + 1, p.y + 1, bodyW - 2, p.height - 2);
+          const lvl = Math.max(0, Math.min(100, p.level));
+          const fillColor = lvl <= (p.low_threshold ?? 20) ? resolveColor(p.low_color || 'red') : resolveColor(p.fill || 'black');
+          ctx.fillStyle = fillColor;
+          ctx.fillRect(p.x + 2, p.y + 2, Math.max(0, (bodyW - 4) * lvl / 100), p.height - 4);
+          ctx.fillStyle = resolveColor(p.outline || 'black');
+          ctx.fillRect(p.x + bodyW, p.y + p.height * 0.3, pad, p.height * 0.4);
+          break;
+        }
+        case 'gauge': {
+          const start = -Math.PI * 0.75, end = Math.PI * 0.75;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, start, end);
+          ctx.strokeStyle = resolveColor(p.outline || 'black'); ctx.lineWidth = p.width || 6; ctx.stroke();
+          const prog = Math.max(0, Math.min(100, p.progress)) / 100;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, start, start + (end - start) * prog);
+          ctx.strokeStyle = resolveColor(p.fill || 'red'); ctx.lineWidth = p.width || 6; ctx.stroke();
+          ctx.fillStyle = '#666'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(`${p.progress}%`, p.x, p.y);
+          ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+          break;
+        }
+        case 'pie': {
+          const slices = parsePieValues(p.values);
+          const total = slices.reduce((s, it) => s + it.value, 0) || 1;
+          let ang = -Math.PI / 2;
+          slices.forEach(sl => {
+            const sweep = (sl.value / total) * Math.PI * 2;
+            ctx.beginPath(); ctx.moveTo(p.x, p.y);
+            ctx.arc(p.x, p.y, p.radius, ang, ang + sweep); ctx.closePath();
+            ctx.fillStyle = resolveColor(sl.color); ctx.fill();
+            ang += sweep;
+          });
+          if (p.inner_radius > 0) {
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.inner_radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff'; ctx.fill();
+          }
+          break;
+        }
+        case 'sparkline': {
+          const vals = parseSparklineValues(p.values);
+          if (!vals.length) break;
+          const min = Math.min(...vals), max = Math.max(...vals), range = max - min || 1;
+          ctx.strokeStyle = resolveColor(p.color || 'black'); ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          vals.forEach((v, i) => {
+            const x = p.x + (i / Math.max(1, vals.length - 1)) * p.width;
+            const y = p.y + p.height - ((v - min) / range) * (p.height - 4) - 2;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          });
+          ctx.stroke();
+          if (p.fill) {
+            ctx.save(); ctx.globalAlpha = 0.3; ctx.fillStyle = resolveColor(p.fill);
+            ctx.lineTo(p.x + p.width, p.y + p.height); ctx.lineTo(p.x, p.y + p.height); ctx.closePath(); ctx.fill(); ctx.restore();
+          }
+          if (p.dot_last && vals.length) {
+            const lx = p.x + p.width, ly = p.y + p.height - ((vals[vals.length - 1] - min) / range) * (p.height - 4) - 2;
+            ctx.fillStyle = resolveColor(p.color || 'black'); ctx.beginPath(); ctx.arc(lx, ly, 2.5, 0, Math.PI * 2); ctx.fill();
+          }
+          break;
+        }
+        case 'text_fit': {
+          ctx.strokeStyle = '#666'; ctx.setLineDash([4, 3]); ctx.strokeRect(p.x, p.y, p.width, p.height); ctx.setLineDash([]);
+          ctx.fillStyle = resolveColor(p.color || 'black');
+          ctx.font = `${Math.min(p.size || 20, p.height - 4)}px sans-serif`;
+          ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+          const txt = String(p.value || '');
+          const shown = txt.length > 24 ? txt.slice(0, 22) + '…' : txt;
+          ctx.fillText(shown, p.x + 4, p.y + p.height / 2);
+          ctx.textBaseline = 'top';
+          break;
+        }
+        case 'row': case 'column': case 'stack': case 'group': {
+          ctx.setLineDash([5, 4]); ctx.strokeStyle = '#7fdbca'; ctx.lineWidth = 1;
+          ctx.strokeRect(p.x || 0, p.y || 0, p.width || 120, p.height || 40); ctx.setLineDash([]);
+          ctx.fillStyle = '#7fdbca'; ctx.font = '10px sans-serif';
+          ctx.fillText(el.type, (p.x || 0) + 4, (p.y || 0) + 12);
           break;
         }
         case 'diagram': {
@@ -1056,6 +1171,21 @@
       return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
     }
 
+    // Corner-drag resize for x/y/width/height elements
+    function cornerResizeXYWH(sp, handle, dx, dy, w, h, minW = 8, minH = 8) {
+      let x1 = sp.x ?? 0, y1 = sp.y ?? 0, x2 = x1 + w, y2 = y1 + h;
+      if (handle.includes('l')) x1 += dx;
+      if (handle.includes('r')) x2 += dx;
+      if (handle.includes('t')) y1 += dy;
+      if (handle.includes('b')) y2 += dy;
+      return {
+        x: Math.round(x1),
+        y: Math.round(y1),
+        w: Math.max(minW, Math.round(x2 - x1)),
+        h: Math.max(minH, Math.round(y2 - y1)),
+      };
+    }
+
     // Apply resize delta for a given element type and handle
     function applyResize(el, sp, handle, dx, dy) {
       const t = el.type;
@@ -1098,27 +1228,35 @@
         if (handle === 'tr') { el.props.y = sp.y + dy; el.props.xsize = Math.max(10, sp.xsize + dx); el.props.ysize = Math.max(10, sp.ysize - dy); }
         if (handle === 'bl') { el.props.x = sp.x + dx; el.props.xsize = Math.max(10, sp.xsize - dx); el.props.ysize = Math.max(10, sp.ysize + dy); }
       }
-      // QR code: compute bbox, resize from any corner
-      else if (t === 'qrcode') {
-        const mods = getQRModuleCount(sp.data);
-        const bs = sp.boxsize || 2;
-        const bd = sp.border === undefined ? 1 : sp.border;
-        const oldS = bs * (mods + 2 * bd);
-        let x1 = sp.x, y1 = sp.y, x2 = sp.x + oldS, y2 = sp.y + oldS;
+      // QR / barcode / widgets / layout: width×height box (imagespec)
+      else if (t === 'barcode' || t === 'qrcode' || t === 'battery' || t === 'sparkline' || t === 'text_fit' || t === 'row' || t === 'column' || t === 'stack' || t === 'group') {
+        const curW = t === 'barcode' ? getBarcodeSize(sp).w : t === 'qrcode' ? getQRSize(sp).w : (sp.width || 50);
+        const curH = t === 'barcode' ? getBarcodeSize(sp).h : t === 'qrcode' ? getQRSize(sp).h : (sp.height || 50);
+        const r = cornerResizeXYWH(sp, handle, dx, dy, curW, curH);
+        el.props.x = r.x;
+        el.props.y = r.y;
+        el.props.width = r.w;
+        el.props.height = r.h;
+      }
+      // Gauge / pie: resize radius from bounding box
+      else if (t === 'gauge' || t === 'pie') {
+        let x1 = sp.x - sp.radius, y1 = sp.y - sp.radius, x2 = sp.x + sp.radius, y2 = sp.y + sp.radius;
         if (handle.includes('l')) x1 += dx;
         if (handle.includes('r')) x2 += dx;
         if (handle.includes('t')) y1 += dy;
         if (handle.includes('b')) y2 += dy;
-        const newS = Math.max(10, Math.max(x2 - x1, y2 - y1));
-        const units = mods + 2 * bd;
-        el.props.boxsize = Math.max(1, Math.round(newS / units));
-        el.props.x = Math.round(x1);
-        el.props.y = Math.round(y1);
+        const newR = Math.max(5, Math.round(Math.max(x2 - x1, y2 - y1) / 2));
+        el.props.radius = newR;
+        el.props.x = Math.round((x1 + x2) / 2);
+        el.props.y = Math.round((y1 + y2) / 2);
       }
-      // Diagram: adjust width/height
+      // Diagram: adjust width/height (all corners)
       else if (t === 'diagram') {
-        if (handle === 'br') { el.props.width = Math.max(40, (sp.width || canvasW) + dx); el.props.height = Math.max(30, sp.height + dy); }
-        if (handle === 'tl') { el.props.x = sp.x + dx; el.props.y = sp.y + dy; el.props.width = Math.max(40, (sp.width || canvasW) - dx); el.props.height = Math.max(30, sp.height - dy); }
+        const r = cornerResizeXYWH(sp, handle, dx, dy, sp.width || canvasW, sp.height || 100, 40, 30);
+        el.props.x = r.x;
+        el.props.y = r.y;
+        el.props.width = r.w;
+        el.props.height = r.h;
       }
       // Plot: adjust x_end/y_end
       else if (t === 'plot') {
@@ -1334,6 +1472,7 @@
       const req = new Set(REQUIRED[el.type] || []);
       let html = '';
       for (const [key, val] of Object.entries(el.props)) {
+        if (EDITOR_ONLY_PROPS.has(key)) continue;
         const meta = FIELD_META[key] || { t: 'str' };
         const isReq = req.has(key);
         const lbl = `<label${isReq ? ' class="required"' : ''}>${key}</label>`;
@@ -1347,7 +1486,7 @@
         }
         else if (meta.t === 'bool') input = `<select onchange="updateProp(${el.id},'${key}',this.value,'bool')"><option value="true"${val ? 'selected' : ''}>true</option><option value="false"${!val ? 'selected' : ''}>false</option></select>`;
         else if (meta.t === 'sel') input = `<select onchange="updateProp(${el.id},'${key}',this.value,'str')">${meta.opts.map(o => `<option${o == val ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
-        else if (meta.t === 'color_sel') input = `<select onchange="updateProp(${el.id},'${key}',this.value,'str')"><option value=""${val === '' ? ' selected' : ''}>—</option><option value="white"${val === 'white' ? ' selected' : ''}>white</option><option value="black"${val === 'black' ? ' selected' : ''}>black</option><option value="red"${val === 'red' ? ' selected' : ''}>red</option><option value="yellow"${val === 'yellow' ? ' selected' : ''}>yellow</option></select>`;
+        else if (meta.t === 'color_sel') input = `<select onchange="updateProp(${el.id},'${key}',this.value,'str')"><option value=""${val === '' ? ' selected' : ''}>—</option><option value="white"${val === 'white' ? ' selected' : ''}>white</option><option value="black"${val === 'black' ? ' selected' : ''}>black</option><option value="red"${val === 'red' ? ' selected' : ''}>red</option><option value="yellow"${val === 'yellow' ? ' selected' : ''}>yellow</option><option value="blue"${val === 'blue' ? ' selected' : ''}>blue</option><option value="green"${val === 'green' ? ' selected' : ''}>green</option><option value="orange"${val === 'orange' ? ' selected' : ''}>orange</option></select>`;
         else input = `<input type="text" value="${escHtml(String(val))}" onchange="updateProp(${el.id},'${key}',this.value,'str')">`;
         html += `<div class="prop-row">${lbl}${input}</div>`;
       }
@@ -1366,56 +1505,123 @@
     }
 
     // === YAML GENERATION ===
-    function renderYaml() {
+    function importPayloadItem(item) {
+      const type = item.type;
+      if (!type) return null;
+      const props = JSON.parse(JSON.stringify(ELEMENT_DEFAULTS[type] || {}));
+      for (const [k, v] of Object.entries(item)) {
+        if (k === 'type') continue;
+        if (k === 'bars' && type === 'diagram') {
+          if (v.values !== undefined) props.bars_values = v.values;
+          if (v.color !== undefined) props.bars_color = v.color;
+          if (v.margin !== undefined) props.bars_margin = v.margin;
+          if (v.legend_size !== undefined) props.bars_legend_size = v.legend_size;
+          if (v.legend_color !== undefined) props.bars_legend_color = v.legend_color;
+          continue;
+        }
+        if (k === 'data' && type === 'plot' && Array.isArray(v)) {
+          if (v.length > 0) {
+            const dItem = v[0];
+            if (dItem.entity !== undefined) props.data_entity = dItem.entity;
+            if (dItem.color !== undefined) props.data_color = dItem.color;
+            if (dItem.width !== undefined) props.data_width = dItem.width;
+          }
+          continue;
+        }
+        if (k === 'elements' && LAYOUT_TYPES.has(type) && Array.isArray(v)) {
+          props._children = v.map(child => {
+            const imported = importPayloadItem(child);
+            return imported ? { type: imported.type, props: imported.props } : null;
+          }).filter(Boolean);
+          continue;
+        }
+        props[k] = v;
+      }
+      return { type, props };
+    }
+
+    function appendPayloadYaml(el, indent) {
+      const pad = ' '.repeat(indent);
+      const childPad = ' '.repeat(indent + 2);
+      let yaml = `${pad}- type: ${el.type}\n`;
+      const defaults = ELEMENT_DEFAULTS[el.type] || {};
+      for (const [key, val] of Object.entries(el.props)) {
+        if (EDITOR_ONLY_PROPS.has(key)) continue;
+        if (el.type === 'diagram' && key.startsWith('bars_')) continue;
+        if (el.type === 'plot' && key.startsWith('data_')) continue;
+        const req = new Set(REQUIRED[el.type] || []);
+        if (!req.has(key) && val === '') continue;
+        if (!req.has(key) && val === 0 && defaults[key] === 0) continue;
+        if (!req.has(key) && defaults && val === defaults[key]) continue;
+        let yval = val;
+        if (el.type === 'barcode' && key === 'data') yval = `"${val}"`;
+        else if (typeof val === 'string') yval = yamlQuote(val);
+        yaml += `${childPad}${key}: ${yval}\n`;
+      }
+      if (el.type === 'diagram') {
+        yaml += `${childPad}bars:\n`;
+        yaml += `${childPad}  values: "${el.props.bars_values}"\n`;
+        yaml += `${childPad}  color: ${el.props.bars_color}\n`;
+        if (el.props.bars_margin !== 10) yaml += `${childPad}  margin: ${el.props.bars_margin}\n`;
+        if (el.props.bars_legend_size !== 10) yaml += `${childPad}  legend_size: ${el.props.bars_legend_size}\n`;
+        if (el.props.bars_legend_color !== 'black') yaml += `${childPad}  legend_color: ${el.props.bars_legend_color}\n`;
+      }
+      if (el.type === 'plot') {
+        yaml += `${childPad}data:\n`;
+        yaml += `${childPad}  - entity: ${el.props.data_entity}\n`;
+        if (el.props.data_color !== 'black') yaml += `${childPad}    color: ${el.props.data_color}\n`;
+        if (el.props.data_width !== 1) yaml += `${childPad}    width: ${el.props.data_width}\n`;
+      }
+      if (LAYOUT_TYPES.has(el.type) && Array.isArray(el.props._children) && el.props._children.length) {
+        yaml += `${childPad}elements:\n`;
+        el.props._children.forEach(child => {
+          yaml += appendPayloadYaml({ type: child.type, props: child.props || {} }, indent + 4);
+        });
+      }
+      return yaml;
+    }
+
+    function renderYaml(force = false) {
+      const yamlEl = document.getElementById('yaml-output');
+      if (!force && document.activeElement === yamlEl) return;
       const rot = document.getElementById('rotateSelect').value;
       const bg = document.getElementById('bgSelect').value;
-      let yaml = `action: gicisky.write\n# Generated by Editor v${EDITOR_VERSION}\ndata:\n`;
+      let yaml = `action: gicisky.write\n# imagespec payload — https://github.com/eigger/imagespec\n# Authoring: ${IMAGESPEC_DOC}\n# Generated by Gicisky Layout Editor v${EDITOR_VERSION}\ndata:\n`;
       if (rot !== '0') yaml += `  rotate: ${rot}\n`;
       if (bg !== 'white') yaml += `  background: ${bg}\n`;
       yaml += '  payload:\n';
       if (elements.length === 0) { yaml += '    []\n'; }
-      elements.forEach(el => {
-        yaml += `    - type: ${el.type}\n`;
-        const defaults = ELEMENT_DEFAULTS[el.type];
-        for (const [key, val] of Object.entries(el.props)) {
-          if (key === 'visible' && val === true) continue;
-          // For diagram/plot special fields
-          if (el.type === 'diagram' && key.startsWith('bars_')) continue;
-          if (el.type === 'plot' && key.startsWith('data_')) continue;
-          // Skip empty optional strings
-          const req = new Set(REQUIRED[el.type] || []);
-          if (!req.has(key) && val === '') continue;
-          if (!req.has(key) && val === 0 && defaults[key] === 0) continue;
-          if (!req.has(key) && val === defaults[key]) continue;
-          // Format value
-          let yval = val;
-          if (el.type === 'barcode' && key === 'data') yval = `"${val}"`;
-          else if (typeof val === 'string' && (val.includes(':') || val.includes('#') || val.includes('{') || val.includes('"') || val.includes("'") || val.match(/^\s/) || val === '')) yval = `"${val}"`;
-          yaml += `      ${key}: ${yval}\n`;
-        }
-        // Diagram bars sub-object
-        if (el.type === 'diagram') {
-          yaml += `      bars:\n`;
-          yaml += `        values: "${el.props.bars_values}"\n`;
-          yaml += `        color: ${el.props.bars_color}\n`;
-          if (el.props.bars_margin !== 10) yaml += `        margin: ${el.props.bars_margin}\n`;
-          if (el.props.bars_legend_size !== 10) yaml += `        legend_size: ${el.props.bars_legend_size}\n`;
-          if (el.props.bars_legend_color !== 'black') yaml += `        legend_color: ${el.props.bars_legend_color}\n`;
-        }
-        // Plot data sub-object
-        if (el.type === 'plot') {
-          yaml += `      data:\n`;
-          yaml += `        - entity: ${el.props.data_entity}\n`;
-          if (el.props.data_color !== 'black') yaml += `          color: ${el.props.data_color}\n`;
-          if (el.props.data_width !== 1) yaml += `          width: ${el.props.data_width}\n`;
-        }
-      });
+      else elements.forEach(el => { yaml += appendPayloadYaml(el, 4); });
       yaml += 'target:\n  device_id: <your device>';
-      document.getElementById('yaml-output').textContent = yaml;
+      yamlEl.value = yaml;
+    }
+
+    function importYaml() {
+      try {
+        const text = document.getElementById('yaml-output').value;
+        const parsed = jsyaml.load(text);
+        if (!parsed || !parsed.data) throw new Error("Invalid YAML: Missing 'data' block");
+        const d = parsed.data;
+        if (d.rotate !== undefined) document.getElementById('rotateSelect').value = d.rotate;
+        if (d.background !== undefined) document.getElementById('bgSelect').value = d.background;
+        elements = [];
+        nextId = 1;
+        selectedId = null;
+        if (Array.isArray(d.payload)) {
+          d.payload.forEach(item => {
+            const imported = importPayloadItem(item);
+            if (imported) elements.push({ id: nextId++, type: imported.type, props: imported.props });
+          });
+        }
+        applyRotation();
+        alert('YAML imported successfully.');
+      } catch (e) {
+        alert('Import error: ' + e.message);
+      }
     }
 
     function copyYaml() {
-      const text = document.getElementById('yaml-output').textContent;
+      const text = document.getElementById('yaml-output').value;
       navigator.clipboard.writeText(text).then(() => {
         const btn = document.querySelector('.btn.copy');
         btn.textContent = '✅ Copied!';
