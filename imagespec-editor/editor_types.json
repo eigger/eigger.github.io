@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "description": "Element types exposed by the imagespec web payload editor (subset of elements.json).",
+  "types": [
+    "text",
+    "multiline",
+    "new_multiline",
+    "text_fit",
+    "line",
+    "rectangle",
+    "rectangle_pattern",
+    "circle",
+    "ellipse",
+    "icon",
+    "dlimg",
+    "qrcode",
+    "barcode",
+    "progress_bar",
+    "battery",
+    "gauge",
+    "pie",
+    "sparkline",
+    "row",
+    "column",
+    "diagram",
+    "plot"
+  ]
+}
