@@ -895,6 +895,7 @@
 
     <footer class="app-footer">
       Version 260804
+      <a id="navLayoutExpert" href="Gicisky_Layout_Uploader.html">Layout Expert</a>
       <a href="https://github.com/eigger/eigger.github.io" target="_blank" rel="noopener">GitHub (eigger)</a>
     </footer>
   </main>
@@ -1054,6 +1055,10 @@
         }
         // Refresh BLE unsupported message if shown
         BLEManager.checkSupport();
+        const navLayout = document.getElementById('navLayoutExpert');
+        if (navLayout) {
+          navLayout.href = 'Gicisky_Layout_Uploader.html?lang=' + encodeURIComponent(GiciskyI18n.lang);
+        }
       }
 
       const LabelMemory = {

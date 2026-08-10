@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="ko" data-i18n-doc-title="layout.title">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gicisky Layout Uploader (Expert)</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Do+Hyeon&family=Nanum+Gothic:wght@400;700;800&family=Nanum+Myeongjo:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap');
+
+    :root {
+      --bg-color: #eef2f7;
+      --text-color: #1e293b;
+      --primary-color: #2563eb;
+      --primary-hover: #1d4ed8;
+      --secondary-color: #64748b;
+      --container-bg: #ffffff;
+      --border-color: #e2e8f0;
+      --shadow-color: rgba(15, 23, 42, 0.08);
+      --status-bg: #f1f5f9;
+      --input-bg: #f8fafc;
+      --accent-soft: #eff6ff;
+      --panel: #0f3460;
+      --danger: #c0392b;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nanum Gothic', system-ui, sans-serif;
+      background: linear-gradient(160deg, var(--bg-color) 0%, var(--accent-soft) 100%);
+      color: var(--text-color);
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 14px 28px;
+    }
+
+    .card {
+      background: var(--container-bg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: 0 4px 16px var(--shadow-color);
+      padding: 14px 16px;
+      margin-bottom: 14px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .app-header h1 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      background: var(--primary-color);
+      border-radius: 999px;
+      padding: 2px 8px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .lang-switch {
+      display: inline-flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .lang-switch button {
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+      color: var(--secondary-color);
+      cursor: pointer;
+    }
+
+    .lang-switch button.active {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: #fff;
+    }
+
+    .header-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 13px;
+    }
+
+    .nav-links a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+
+    .nav-links a:hover { text-decoration: underline; }
+
+    .hint {
+      font-size: 13px;
+      color: var(--secondary-color);
+      margin-top: 8px;
+      line-height: 1.45;
+    }
+
+    h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    label { font-size: 13px; font-weight: 600; color: var(--secondary-color); }
+
+    select, input[type=text], input[type=number], textarea {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 6px 8px;
+      font-size: 13px;
+      color: var(--text-color);
+      outline: none;
+    }
+
+    select:focus, input:focus, textarea:focus { border-color: var(--primary-color); }
+
+    .mac-input { display: flex; align-items: center; gap: 4px; }
+    .mac-octet {
+      width: 44px;
+      text-align: center;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .btn {
+      background: #e2e8f0;
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .btn:hover { background: #cbd5e1; }
+    .btn-primary {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-danger { border-color: var(--danger); color: var(--danger); }
+    .btn-lg { padding: 12px 22px; font-size: 14px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 12px;
+    }
+
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 1fr; }
+    }
+
+    .canvas-wrap {
+      position: relative;
+      overflow: auto;
+      background: #e2e8f0;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      min-height: 280px;
+      max-height: 560px;
+      padding: 16px;
+      text-align: center;
+      cursor: default;
+      user-select: none;
+    }
+
+    #canvas {
+      display: inline-block;
+      vertical-align: top;
+      background: transparent;
+      box-shadow: 0 0 0 1px #94a3b8;
+      image-rendering: pixelated;
+      /* scaled via JS width/height; no transform offset */
+    }
+
+    .sidebar {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 560px;
+      background: var(--input-bg);
+    }
+
+    .sidebar h3 {
+      font-size: 12px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--container-bg);
+      color: var(--primary-color);
+    }
+
+    .el-list { flex: 1; overflow: auto; padding: 6px; min-height: 120px; }
+    .el-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .el-item:hover { background: #e2e8f0; }
+    .el-item.selected { background: #dbeafe; border-color: var(--primary-color); }
+    .el-type { font-weight: 800; color: var(--primary-color); min-width: 56px; }
+    .el-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--secondary-color); }
+    .el-actions button {
+      border: none; background: none; cursor: pointer; color: var(--secondary-color); font-size: 13px; padding: 0 2px;
+    }
+    .el-actions button:hover { color: var(--primary-color); }
+
+    .props { border-top: 1px solid var(--border-color); max-height: 45%; overflow: auto; background: var(--container-bg); }
+    .prop-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 10px;
+    }
+    .prop-row label { min-width: 72px; text-align: right; font-size: 11px; }
+    .prop-row input, .prop-row select { flex: 1; min-width: 0; }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .slider-row { display: flex; flex-direction: column; gap: 4px; }
+    .slider-row input[type=range] { width: 100%; }
+
+    #pixelData { display: none; }
+
+    .progress-wrap {
+      display: none;
+      position: relative;
+      height: 22px;
+      background: var(--status-bg);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 10px;
+      border: 1px solid var(--border-color);
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      background: var(--primary-color);
+      transition: width .15s;
+    }
+    .progress-text {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800;
+    }
+
+    .log-view {
+      margin-top: 10px;
+      background: var(--status-bg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      font-size: 12px;
+      max-height: 160px;
+      overflow: auto;
+      text-align: left;
+    }
+
+    .app-footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--secondary-color);
+      padding: 10px;
+    }
+    .app-footer a { color: var(--primary-color); text-decoration: none; margin-left: 8px; }
+
+    .empty { padding: 16px; text-align: center; color: var(--secondary-color); font-size: 12px; }
+
+    .preview-box {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--status-bg);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      text-align: center;
+    }
+
+    .preview-box h3 {
+      font-size: 12px;
+      color: var(--primary-color);
+      margin-bottom: 8px;
+      text-align: left;
+    }
+
+    #finalPreview {
+      display: inline-block;
+      max-width: 100%;
+      image-rendering: pixelated;
+      box-shadow: 0 0 0 1px #94a3b8;
+      background: #fff;
+    }
+
+    .preview-meta {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--secondary-color);
+    }
+
+    .browser-notice:not([hidden]) {
+      display: block;
+      margin: 10px 0 0;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: bold;
+      color: #b45309;
+      background-color: #fff7ed;
+      border: 1px solid #fdba74;
+    }
+
+    #ble-support {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      color: #dc2626;
+      font-weight: bold;
+      font-size: 13px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+    }
+
+    #ble-support:empty {
+      display: none;
+      margin: 0;
+      padding: 0;
+      border: none;
+    }
+
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header class="card app-header">
+      <div>
+        <h1><span data-i18n="layout.pageTitle">전자 라벨 (Gicisky) Layout Uploader</span> <span class="badge" data-i18n="layout.badge">Expert</span></h1>
+        <p class="hint" data-i18n="layout.intro">텍스트·도형·이미지·QR로 레이아웃을 만든 뒤 BLE로 업로드합니다. 일반 사진 업로드는 기존 업로더를 사용하세요.</p>
+        <label class="browser-notice" id="browserNotice" hidden data-i18n="browserNotice">⚠️ Chrome 브라우저가 아니면 정상 동작하지 않을 수 있습니다.</label>
+        <div id="ble-support"></div>
+      </div>
+      <div class="header-actions">
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button type="button" id="langKo" data-lang="ko" data-i18n="langKo">한국어</button>
+          <button type="button" id="langEn" data-lang="en" data-i18n="langEn">English</button>
+        </div>
+        <div class="nav-links">
+          <a id="navSimple" href="Gicisky_Image_Uploader.html" data-i18n="layout.navSimple">← 일반 업로더</a>
+          <a id="navYaml" href="Gicisky_Payload_Editor.html" data-i18n="layout.navYaml">HA YAML 에디터</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2 data-i18n="layout.step1">1. 라벨 번호 · 타입</h2>
+      <div class="row">
+        <div class="mac-input">
+          <input type="text" class="mac-octet" id="mac0" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+          <span>.</span>
+          <input type="text" class="mac-octet" id="mac1" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+          <span>.</span>
+          <input type="text" class="mac-octet" id="mac2" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+          <span>.</span>
+          <input type="text" class="mac-octet" id="mac3" maxlength="2" inputmode="numeric" placeholder="xx" autocomplete="off">
+        </div>
+        <select id="optionsSelect"></select>
+        <label><span data-i18n="layout.bg">배경</span>
+          <select id="bgSelect">
+            <option value="white">White</option>
+            <option value="black">Black</option>
+            <option value="red">Red</option>
+            <option value="yellow">Yellow</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint" id="labelSizeHint"></p>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="layout.step2">2. 레이아웃</h2>
+      <div class="toolbar" id="toolbar"></div>
+      <div class="row" style="margin-top:8px;gap:6px">
+        <button type="button" class="btn" id="layoutSaveButton" data-i18n="layout.save">레이아웃 저장</button>
+        <button type="button" class="btn" id="layoutLoadButton" data-i18n="layout.load">레이아웃 불러오기</button>
+        <button type="button" class="btn" id="layoutClearButton" data-i18n="layout.clear">레이아웃 비우기</button>
+      </div>
+      <p class="hint" data-i18n="layout.hintCanvas">캔버스: 드래그로 이동 · 모서리 핸들로 크기 조절 · Delete로 삭제 · 휠로 확대/축소. 이미지 요소는 Properties에서 디더링/임계값 설정. 저장 파일에 이미지도 포함됩니다.</p>
+      <div class="workspace" style="margin-top:10px">
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas id="canvas"></canvas>
+        </div>
+        <div class="sidebar">
+          <h3 data-i18n="layout.elements">Elements</h3>
+          <div class="el-list" id="elementList"><div class="empty" data-i18n="layout.emptyAdd">요소를 추가하세요</div></div>
+          <div class="props">
+            <h3 data-i18n="layout.properties">Properties</h3>
+            <div id="propsContent"><div class="empty" data-i18n="layout.emptySelect">선택 없음</div></div>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="imageFileInput" accept="image/*" hidden>
+      <input type="file" id="layoutFileInput" accept="application/json,.json" hidden>
+    </section>
+
+    <section class="card">
+      <h2 data-i18n="layout.step3">3. 최종 미리보기 · 업로드</h2>
+      <p class="hint" data-i18n="layout.hintPreview">디더링·임계값은 이미지 요소 Properties에서만 설정합니다. 텍스트/도형/QR은 선명하게 유지되고, 레이아웃을 바꾸면 최종 미리보기가 자동으로 갱신됩니다.</p>
+      <div class="slider-row" id="legacy75Wrap" hidden style="margin-top:8px">
+        <label><input type="checkbox" id="legacy75Checkbox"> <span data-i18n="legacy75">7.5인치 구형 펌웨어 (0x8101) — 레거시 압축</span></label>
+      </div>
+      <div class="preview-box" id="previewBox">
+        <h3 data-i18n="layout.previewHeading">최종 결과 (기기에 표시될 모습)</h3>
+        <canvas id="finalPreview" width="1" height="1"></canvas>
+        <div class="preview-meta" id="previewMeta" data-i18n="layout.previewMetaIdle">미리보기를 생성하세요</div>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button type="button" class="btn" id="saveButton" data-i18n="layout.pngSave">PNG 저장</button>
+        <button type="button" class="btn btn-primary btn-lg" id="uploadButton" data-i18n="layout.upload">레이아웃 업로드</button>
+      </div>
+      <textarea id="pixelData"></textarea>
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar" id="progressBar"></div>
+        <span class="progress-text" id="progressText">0%</span>
+      </div>
+      <div class="log-view">
+        <div id="status"></div>
+        <div id="log"></div>
+      </div>
+    </section>
+
+    <footer class="app-footer">
+      Version 260810
+      <a href="https://github.com/eigger/eigger.github.io" target="_blank" rel="noopener" data-i18n="layout.github">GitHub</a>
+    </footer>
+  </main>
+
+  <script src="gicisky/utils.js"></script>
+  <script src="gicisky/devices.js"></script>
+  <script src="gicisky/dither.js"></script>
+  <script src="gicisky/compress2.js"></script>
+  <script src="gicisky/pack.js"></script>
+  <script src="gicisky/ble.js"></script>
+  <script src="gicisky/i18n.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+
+  <script>
+  (function () {
+    'use strict';
+
+    const VERSION = '260810';
+    const IMAGE_PART_HEX_LEN = GiciskyBle.IMAGE_PART_HEX_LEN;
+    const Utils = GiciskyUtils;
+    const $ = (id) => document.getElementById(id);
+    const t = (...args) => GiciskyI18n.t(...args);
+
+    const COLORS = {
+      white: '#ffffff', black: '#000000', red: '#ff0000', yellow: '#ffff00',
+      blue: '#0000ff', green: '#008000', orange: '#ff8800',
+    };
+    const resolveColor = (c) => COLORS[c] || c || '#000000';
+
+    const TOOLBAR = [
+      { type: 'text', labelKey: 'layout.toolText' },
+      { type: 'rectangle', labelKey: 'layout.toolRect' },
+      { type: 'line', labelKey: 'layout.toolLine' },
+      { type: 'circle', labelKey: 'layout.toolCircle' },
+      { type: 'image', labelKey: 'layout.toolImage' },
+      { type: 'qrcode', labelKey: 'layout.toolQr' },
+    ];
+
+    const DEFAULTS = {
+      text: { x: 10, y: 10, value: 'Text', size: 20, color: 'black', font: 'Nanum Gothic' },
+      rectangle: { x_start: 10, y_start: 10, x_end: 120, y_end: 70, fill: '', outline: 'black', width: 2 },
+      line: { x_start: 10, y_start: 40, x_end: 180, y_end: 40, fill: 'black', width: 2 },
+      circle: { x: 60, y: 60, radius: 28, fill: '', outline: 'black', width: 2 },
+      image: {
+        x: 10, y: 10, width: 100, height: 80, fit: 'contain',
+        dither: 'off', lumThreshold: 128, redThreshold: 128,
+      },
+      qrcode: { x: 10, y: 10, size: 80, data: 'https://example.com', color: 'black', bgcolor: 'white' },
+    };
+
+    const FONT_OPTIONS = [
+      'Nanum Gothic',
+      'Nanum Myeongjo',
+      'Noto Sans KR',
+      'Black Han Sans',
+      'Do Hyeon',
+      'sans-serif',
+      'serif',
+      'monospace',
+    ];
+
+    const FIELD_META = {
+      x: 'num', y: 'num', value: 'str', size: 'num', color: 'color', font: 'font',
+      x_start: 'num', y_start: 'num', x_end: 'num', y_end: 'num',
+      fill: 'color', outline: 'color', width: 'num', radius: 'num',
+      height: 'num', data: 'str', bgcolor: 'color', fit: 'sel:contain|cover|stretch',
+      dither: 'sel:off|floyd', lumThreshold: 'num', redThreshold: 'num',
+    };
+
+    let elements = [];
+    let selectedId = null;
+    let nextId = 1;
+    let viewScale = 2;
+    let currentDevice = GiciskyDevices.getDevice('0B');
+    const imageCache = {}; // elId -> HTMLImageElement
+    const qrCache = {}; // elId -> { key, img }
+    const imageQuantCache = {}; // elId -> { key, imageData }
+
+    const canvas = $('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const wrap = $('canvasWrap');
+
+    function getActiveDevice() {
+      return GiciskyDevices.getDevice($('optionsSelect').value, {
+        legacy75: !!( $('legacy75Checkbox') && $('legacy75Checkbox').checked ),
+      });
+    }
+
+    function deviceW() { return currentDevice.width; }
+    function deviceH() { return currentDevice.height; }
+
+    function populateDeviceSelect() {
+      const sel = $('optionsSelect');
+      const prev = sel.value || '0B';
+      sel.innerHTML = '';
+      GiciskyDevices.listDevices().forEach((d) => {
+        const opt = document.createElement('option');
+        opt.value = d.uiKey;
+        opt.textContent = t('device.' + d.uiKey);
+        sel.appendChild(opt);
+      });
+      if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;
+      else sel.value = '0B';
+    }
+
+    let dragging = null;
+
+    function updateDeviceHints() {
+      currentDevice = getActiveDevice();
+      const key = $('optionsSelect').value;
+      const meta = GiciskyI18n.deviceMeta(key);
+      $('labelSizeHint').textContent = currentDevice
+        ? t('sizeSelected', meta)
+        : '';
+      const showLegacy = currentDevice.id === 0x012B;
+      $('legacy75Wrap').hidden = !showLegacy;
+      if (!showLegacy) $('legacy75Checkbox').checked = false;
+      // device palette change invalidates per-image quant cache
+      Object.keys(imageQuantCache).forEach((k) => { delete imageQuantCache[k]; });
+      resizeCanvas();
+    }
+
+    function resizeCanvas() {
+      canvas.width = deviceW();
+      canvas.height = deviceH();
+      updateScale();
+      refresh();
+    }
+
+    function updateScale() {
+      const ww = Math.max(120, wrap.clientWidth - 40);
+      const wh = Math.max(180, Math.min(520, wrap.clientHeight - 40) || 320);
+      viewScale = Math.min(ww / deviceW(), wh / deviceH(), 3) * 0.95;
+      applyCanvasCss();
+    }
+
+    function applyCanvasCss() {
+      canvas.style.width = (deviceW() * viewScale) + 'px';
+      canvas.style.height = (deviceH() * viewScale) + 'px';
+      canvas.style.transform = '';
+    }
+
+    function addElement(type) {
+      if (type === 'image') {
+        $('imageFileInput').onchange = async (e) => {
+          const file = e.target.files && e.target.files[0];
+          e.target.value = '';
+          if (!file) return;
+          const img = await loadFileImage(file);
+          const props = JSON.parse(JSON.stringify(DEFAULTS.image));
+          const scale = Math.min(1, (deviceW() * 0.45) / img.width, (deviceH() * 0.45) / img.height);
+          props.width = Math.max(20, Math.round(img.width * scale));
+          props.height = Math.max(20, Math.round(img.height * scale));
+          const el = { id: nextId++, type: 'image', props };
+          imageCache[el.id] = img;
+          elements.push(el);
+          selectedId = el.id;
+          refresh();
+        };
+        $('imageFileInput').click();
+        return;
+      }
+      const props = JSON.parse(JSON.stringify(DEFAULTS[type]));
+      if (type === 'line') {
+        props.y_start = Math.floor(deviceH() / 2);
+        props.y_end = props.y_start;
+        props.x_end = Math.min(deviceW() - 10, props.x_end);
+      }
+      if (type === 'text') {
+        props.y = Math.min(deviceH() - (props.size || 20), Math.max(0, props.y));
+      }
+      const el = { id: nextId++, type, props };
+      elements.push(el);
+      selectedId = el.id;
+      refresh();
+    }
+
+    function loadFileImage(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    function removeElement(id) {
+      elements = elements.filter((e) => e.id !== id);
+      delete imageCache[id];
+      delete qrCache[id];
+      delete imageQuantCache[id];
+      if (selectedId === id) selectedId = null;
+      refresh();
+    }
+
+    function moveElement(id, dir) {
+      const idx = elements.findIndex((e) => e.id === id);
+      if (idx < 0) return;
+      if (dir === 'up' && idx > 0) [elements[idx - 1], elements[idx]] = [elements[idx], elements[idx - 1]];
+      if (dir === 'down' && idx < elements.length - 1) [elements[idx + 1], elements[idx]] = [elements[idx], elements[idx + 1]];
+      refresh();
+    }
+
+    function duplicateElement(id) {
+      const src = elements.find((e) => e.id === id);
+      if (!src) return;
+      const el = { id: nextId++, type: src.type, props: JSON.parse(JSON.stringify(src.props)) };
+      if (src.type === 'image' && imageCache[src.id]) imageCache[el.id] = imageCache[src.id];
+      if (['text', 'image', 'qrcode', 'circle'].includes(el.type)) {
+        el.props.x = (el.props.x || 0) + 12;
+        el.props.y = (el.props.y || 0) + 12;
+      } else if (el.type === 'rectangle' || el.type === 'line') {
+        el.props.x_start += 12; el.props.x_end += 12;
+        el.props.y_start += 12; el.props.y_end += 12;
+      }
+      elements.push(el);
+      selectedId = el.id;
+      refresh();
+    }
+
+    function fontCss(font) {
+      const name = font || 'Nanum Gothic';
+      if (name === 'sans-serif' || name === 'serif' || name === 'monospace') return name;
+      return `"${name}", sans-serif`;
+    }
+
+    function measureTextWidth(value, size, font) {
+      ctx.save();
+      ctx.font = `${size || 16}px ${fontCss(font)}`;
+      const w = Math.ceil(ctx.measureText(String(value || ' ')).width) || 20;
+      ctx.restore();
+      return w;
+    }
+
+    function getBBox(el) {
+      const p = el.props;
+      switch (el.type) {
+        case 'text': {
+          const h = Math.max(8, p.size || 16);
+          const w = measureTextWidth(p.value, h, p.font);
+          // x,y = top-left of text box (textBaseline top)
+          return { x: p.x, y: p.y, w, h };
+        }
+        case 'rectangle':
+          return {
+            x: Math.min(p.x_start, p.x_end),
+            y: Math.min(p.y_start, p.y_end),
+            w: Math.abs(p.x_end - p.x_start),
+            h: Math.abs(p.y_end - p.y_start),
+          };
+        case 'line':
+          return {
+            x: Math.min(p.x_start, p.x_end),
+            y: Math.min(p.y_start, p.y_end),
+            w: Math.max(1, Math.abs(p.x_end - p.x_start)),
+            h: Math.max(1, Math.abs(p.y_end - p.y_start)),
+          };
+        case 'circle':
+          return { x: p.x - p.radius, y: p.y - p.radius, w: p.radius * 2, h: p.radius * 2 };
+        case 'image':
+        case 'qrcode':
+          return { x: p.x, y: p.y, w: p.width || p.size || 80, h: p.height || p.size || 80 };
+        default:
+          return { x: 0, y: 0, w: 10, h: 10 };
+      }
+    }
+
+    function drawElement(el) {
+      const p = el.props;
+      ctx.save();
+      switch (el.type) {
+        case 'text':
+          ctx.fillStyle = resolveColor(p.color);
+          ctx.font = `${p.size || 16}px ${fontCss(p.font)}`;
+          ctx.textBaseline = 'top';
+          ctx.textAlign = 'left';
+          ctx.fillText(String(p.value || ''), p.x, p.y);
+          break;
+        case 'rectangle': {
+          const x = Math.min(p.x_start, p.x_end);
+          const y = Math.min(p.y_start, p.y_end);
+          const w = Math.abs(p.x_end - p.x_start);
+          const h = Math.abs(p.y_end - p.y_start);
+          if (p.fill) {
+            ctx.fillStyle = resolveColor(p.fill);
+            ctx.fillRect(x, y, w, h);
+          }
+          ctx.strokeStyle = resolveColor(p.outline || 'black');
+          ctx.lineWidth = p.width || 1;
+          ctx.strokeRect(x, y, w, h);
+          break;
+        }
+        case 'line':
+          ctx.strokeStyle = resolveColor(p.fill || 'black');
+          ctx.lineWidth = p.width || 1;
+          ctx.beginPath();
+          ctx.moveTo(p.x_start, p.y_start);
+          ctx.lineTo(p.x_end, p.y_end);
+          ctx.stroke();
+          break;
+        case 'circle':
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius || 10, 0, Math.PI * 2);
+          if (p.fill) {
+            ctx.fillStyle = resolveColor(p.fill);
+            ctx.fill();
+          }
+          ctx.strokeStyle = resolveColor(p.outline || 'black');
+          ctx.lineWidth = p.width || 1;
+          ctx.stroke();
+          break;
+        case 'image': {
+          drawImageElement(el);
+          break;
+        }
+        case 'qrcode': {
+          const size = p.size || 80;
+          const cached = qrCache[el.id];
+          if (cached && cached.img) {
+            ctx.drawImage(cached.img, p.x, p.y, size, size);
+          } else {
+            ctx.fillStyle = resolveColor(p.bgcolor || 'white');
+            ctx.fillRect(p.x, p.y, size, size);
+            ctx.strokeStyle = '#999';
+            ctx.strokeRect(p.x, p.y, size, size);
+            ctx.fillStyle = '#666';
+            ctx.font = '11px sans-serif';
+            ctx.fillText('QR…', p.x + 8, p.y + size / 2);
+            ensureQr(el);
+          }
+          break;
+        }
+      }
+      ctx.restore();
+    }
+
+    function imageQuantKey(el) {
+      const p = el.props;
+      const d = currentDevice || {};
+      return [
+        d.id, p.width, p.height, p.fit, p.dither || 'off',
+        p.lumThreshold ?? 128, p.redThreshold ?? 128,
+        // bust when source image object identity changes
+        imageCache[el.id] ? (imageCache[el.id].width + 'x' + imageCache[el.id].height) : 'none',
+      ].join('|');
+    }
+
+    function getQuantizedImageData(el) {
+      const img = imageCache[el.id];
+      const p = el.props;
+      const w = Math.max(1, Math.round(p.width || 80));
+      const h = Math.max(1, Math.round(p.height || 80));
+      if (!img) return null;
+
+      const key = imageQuantKey(el);
+      const cached = imageQuantCache[el.id];
+      if (cached && cached.key === key) return cached.imageData;
+
+      const off = document.createElement('canvas');
+      off.width = w;
+      off.height = h;
+      const octx = off.getContext('2d', { willReadFrequently: true });
+      octx.fillStyle = resolveColor($('bgSelect').value || 'white');
+      octx.fillRect(0, 0, w, h);
+
+      if (p.fit === 'stretch') {
+        octx.drawImage(img, 0, 0, w, h);
+      } else {
+        const s = p.fit === 'cover'
+          ? Math.max(w / img.width, h / img.height)
+          : Math.min(w / img.width, h / img.height);
+        const dw = img.width * s;
+        const dh = img.height * s;
+        const dx = (w - dw) / 2;
+        const dy = (h - dh) / 2;
+        octx.save();
+        octx.beginPath();
+        octx.rect(0, 0, w, h);
+        octx.clip();
+        octx.drawImage(img, dx, dy, dw, dh);
+        octx.restore();
+      }
+
+      const raw = octx.getImageData(0, 0, w, h);
+      const quantOpts = {
+        mode: (p.dither === 'floyd') ? 'floyd' : 'off',
+        lumThreshold: p.lumThreshold != null ? p.lumThreshold : 128,
+        redThreshold: p.redThreshold != null ? p.redThreshold : 128,
+      };
+      const quantized = GiciskyDither.quantize(raw, currentDevice, quantOpts);
+      imageQuantCache[el.id] = { key, imageData: quantized };
+      return quantized;
+    }
+
+    function drawImageElement(el) {
+      const p = el.props;
+      const w = Math.max(1, Math.round(p.width || 80));
+      const h = Math.max(1, Math.round(p.height || 80));
+      const quantized = getQuantizedImageData(el);
+      if (quantized) {
+        // putImageData is in device pixels — clip to canvas bounds
+        const x = Math.round(p.x);
+        const y = Math.round(p.y);
+        ctx.putImageData(quantized, x, y);
+      } else {
+        ctx.strokeStyle = '#999';
+        ctx.strokeRect(p.x, p.y, w, h);
+        ctx.fillStyle = '#999';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('image', p.x + 6, p.y + 18);
+      }
+    }
+
+    function ensureQr(el) {
+      if (typeof QRCode === 'undefined') return;
+      const key = `${el.props.data || ''}|${el.props.color}|${el.props.bgcolor}|${el.props.size}`;
+      if (qrCache[el.id] && qrCache[el.id].key === key) return;
+      qrCache[el.id] = { key, img: null };
+      const size = Math.max(64, el.props.size || 80);
+      QRCode.toDataURL(String(el.props.data || ''), {
+        width: size * 2,
+        margin: 1,
+        color: {
+          dark: resolveColor(el.props.color || 'black'),
+          light: resolveColor(el.props.bgcolor || 'white'),
+        },
+      }).then((url) => {
+        const img = new Image();
+        img.onload = () => {
+          if (qrCache[el.id] && qrCache[el.id].key === key) {
+            qrCache[el.id].img = img;
+            refresh();
+          }
+        };
+        img.src = url;
+      }).catch(() => {});
+    }
+
+    function drawSelection(el) {
+      const b = getBBox(el);
+      ctx.save();
+      ctx.strokeStyle = '#2563eb';
+      ctx.setLineDash([4, 3]);
+      ctx.lineWidth = 1;
+      ctx.strokeRect(b.x - 1, b.y - 1, b.w + 2, b.h + 2);
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#2563eb';
+      const handles = selectionHandles(el, b);
+      handles.forEach((h) => ctx.fillRect(h.x - 3, h.y - 3, 6, 6));
+      ctx.restore();
+    }
+
+    function selectionHandles(el, b) {
+      if (el.type === 'line') {
+        return [
+          { id: 'a', x: el.props.x_start, y: el.props.y_start },
+          { id: 'b', x: el.props.x_end, y: el.props.y_end },
+        ];
+      }
+      return [
+        { id: 'nw', x: b.x, y: b.y },
+        { id: 'ne', x: b.x + b.w, y: b.y },
+        { id: 'sw', x: b.x, y: b.y + b.h },
+        { id: 'se', x: b.x + b.w, y: b.y + b.h },
+      ];
+    }
+
+    function drawScene(forExport) {
+      ctx.fillStyle = resolveColor($('bgSelect').value || 'white');
+      ctx.fillRect(0, 0, deviceW(), deviceH());
+      elements.forEach((el) => drawElement(el));
+      if (!forExport && selectedId != null) {
+        const sel = elements.find((e) => e.id === selectedId);
+        if (sel) drawSelection(sel);
+      }
+    }
+
+    function refresh() {
+      drawScene(false);
+      renderList();
+      renderProps();
+      scheduleFinalPreview();
+    }
+
+    /** Composite already uses per-image dither. Flat-threshold snap only (no dither) for AA cleanup + final preview. */
+    function buildFinalImageData() {
+      drawScene(true);
+      const imageData = ctx.getImageData(0, 0, deviceW(), deviceH());
+      currentDevice = getActiveDevice();
+      // Flat palette snap — does not Floyd-dither; preserves already-dithered image pixels
+      return GiciskyDither.quantize(imageData, currentDevice, {
+        mode: 'off',
+        lumThreshold: 128,
+        redThreshold: 128,
+      });
+    }
+
+    let previewTimer = null;
+    function scheduleFinalPreview(immediate) {
+      if (previewTimer != null) {
+        clearTimeout(previewTimer);
+        previewTimer = null;
+      }
+      if (immediate) {
+        updateFinalPreview();
+        return;
+      }
+      // Debounce while dragging / rapid prop edits
+      previewTimer = setTimeout(() => {
+        previewTimer = null;
+        updateFinalPreview();
+      }, dragging ? 120 : 60);
+    }
+
+    function updateFinalPreview() {
+      if (previewTimer != null) {
+        clearTimeout(previewTimer);
+        previewTimer = null;
+      }
+      const quantized = buildFinalImageData();
+      const preview = $('finalPreview');
+      preview.width = quantized.width;
+      preview.height = quantized.height;
+      const pctx = preview.getContext('2d');
+      pctx.putImageData(quantized, 0, 0);
+
+      const maxCss = Math.min(480, wrap.clientWidth || 480);
+      const scale = Math.min(1, maxCss / quantized.width);
+      preview.style.width = Math.round(quantized.width * scale) + 'px';
+      preview.style.height = Math.round(quantized.height * scale) + 'px';
+
+      const payload = GiciskyPack.packImage(quantized, currentDevice);
+      $('pixelData').value = Utils.bytesToHex(payload);
+      $('previewMeta').textContent = t('layout.previewMeta', {
+        model: currentDevice.model,
+        width: quantized.width,
+        height: quantized.height,
+        kb: (payload.length / 1024).toFixed(1),
+      });
+
+      // restore editor overlay (no schedule — avoid preview loop)
+      drawScene(false);
+      return { quantized, payload };
+    }
+
+    function packToPixelData() {
+      return updateFinalPreview();
+    }
+
+    function renderList() {
+      const box = $('elementList');
+      if (!elements.length) {
+        box.innerHTML = `<div class="empty">${escapeHtml(t('layout.emptyAdd'))}</div>`;
+        return;
+      }
+      box.innerHTML = elements.map((el) => {
+        const label = el.type === 'text' ? el.props.value
+          : el.type === 'qrcode' ? el.props.data
+          : el.type === 'image' ? 'image' : '';
+        return `<div class="el-item ${el.id === selectedId ? 'selected' : ''}" data-id="${el.id}">
+          <span class="el-type">${el.type}</span>
+          <span class="el-label">${escapeHtml(String(label || ''))}</span>
+          <span class="el-actions">
+            <button type="button" data-act="up" title="${escapeHtml(t('layout.actUp'))}">↑</button>
+            <button type="button" data-act="down" title="${escapeHtml(t('layout.actDown'))}">↓</button>
+            <button type="button" data-act="dup" title="${escapeHtml(t('layout.actDup'))}">⧉</button>
+            <button type="button" data-act="del" title="${escapeHtml(t('layout.actDel'))}">✕</button>
+          </span>
+        </div>`;
+      }).join('');
+      box.querySelectorAll('.el-item').forEach((node) => {
+        const id = parseInt(node.dataset.id, 10);
+        node.addEventListener('click', (e) => {
+          const act = e.target.getAttribute('data-act');
+          if (act === 'up') return moveElement(id, 'up');
+          if (act === 'down') return moveElement(id, 'down');
+          if (act === 'dup') return duplicateElement(id);
+          if (act === 'del') return removeElement(id);
+          selectedId = id;
+          refresh();
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function renderProps() {
+      const box = $('propsContent');
+      const el = elements.find((e) => e.id === selectedId);
+      if (!el) {
+        box.innerHTML = `<div class="empty">${escapeHtml(t('layout.emptySelect'))}</div>`;
+        return;
+      }
+      const rows = Object.keys(el.props).filter((key) => {
+        if (el.type === 'image' && key === 'redThreshold' && currentDevice && !currentDevice.red) return false;
+        return true;
+      }).map((key) => {
+        const meta = FIELD_META[key] || 'str';
+        const val = el.props[key];
+        let input;
+        if (meta === 'num') {
+          input = `<input type="number" data-key="${key}" value="${val}">`;
+        } else if (meta === 'font') {
+          const opts = FONT_OPTIONS
+            .map((f) => `<option value="${escapeHtml(f)}" ${String(val) === f ? 'selected' : ''}>${escapeHtml(f)}</option>`).join('');
+          input = `<select data-key="${key}">${opts}</select>`;
+        } else if (meta === 'color') {
+          const opts = ['', 'white', 'black', 'red', 'yellow', 'blue', 'green', 'orange']
+            .map((c) => `<option value="${c}" ${String(val) === c ? 'selected' : ''}>${c || '—'}</option>`).join('');
+          input = `<select data-key="${key}">${opts}</select>`;
+        } else if (meta.startsWith('sel:')) {
+          const opts = meta.slice(4).split('|')
+            .map((c) => `<option value="${c}" ${String(val) === c ? 'selected' : ''}>${c}</option>`).join('');
+          input = `<select data-key="${key}">${opts}</select>`;
+        } else {
+          input = `<input type="text" data-key="${key}" value="${escapeHtml(String(val ?? ''))}">`;
+        }
+        return `<div class="prop-row"><label>${key}</label>${input}</div>`;
+      }).join('');
+      box.innerHTML = rows;
+      box.querySelectorAll('[data-key]').forEach((input) => {
+        input.addEventListener('change', () => {
+          const key = input.getAttribute('data-key');
+          let v = input.value;
+          if ((FIELD_META[key] || '') === 'num') v = parseFloat(v) || 0;
+          el.props[key] = v;
+          if (el.type === 'qrcode') delete qrCache[el.id];
+          if (el.type === 'image') delete imageQuantCache[el.id];
+          refresh();
+        });
+      });
+    }
+
+    function screenToCanvas(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left) / viewScale,
+        y: (clientY - rect.top) / viewScale,
+      };
+    }
+
+    function hitHandle(el, x, y) {
+      const b = getBBox(el);
+      return selectionHandles(el, b).find((h) => Math.abs(h.x - x) <= 6 && Math.abs(h.y - y) <= 6);
+    }
+
+    function hitTest(x, y) {
+      for (let i = elements.length - 1; i >= 0; i--) {
+        const el = elements[i];
+        if (el.type === 'line') {
+          const d = distToSegment(x, y, el.props.x_start, el.props.y_start, el.props.x_end, el.props.y_end);
+          if (d <= 5) return el;
+          continue;
+        }
+        const b = getBBox(el);
+        if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return el;
+      }
+      return null;
+    }
+
+    function distToSegment(px, py, x1, y1, x2, y2) {
+      const dx = x2 - x1, dy = y2 - y1;
+      if (dx === 0 && dy === 0) return Math.hypot(px - x1, py - y1);
+      const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
+      return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+    }
+
+    function applyResize(el, handle, dx, dy, start) {
+      const p = el.props;
+      const sp = start;
+      if (el.type === 'line') {
+        if (handle === 'a') { p.x_start = sp.x_start + dx; p.y_start = sp.y_start + dy; }
+        if (handle === 'b') { p.x_end = sp.x_end + dx; p.y_end = sp.y_end + dy; }
+        return;
+      }
+      if (el.type === 'circle') {
+        const b0 = { x: sp.x - sp.radius, y: sp.y - sp.radius, w: sp.radius * 2, h: sp.radius * 2 };
+        let x1 = b0.x, y1 = b0.y, x2 = b0.x + b0.w, y2 = b0.y + b0.h;
+        if (handle.includes('n')) y1 += dy;
+        if (handle.includes('s')) y2 += dy;
+        if (handle.includes('w')) x1 += dx;
+        if (handle.includes('e')) x2 += dx;
+        p.radius = Math.max(4, Math.round(Math.min(Math.abs(x2 - x1), Math.abs(y2 - y1)) / 2));
+        p.x = Math.round((x1 + x2) / 2);
+        p.y = Math.round((y1 + y2) / 2);
+        return;
+      }
+      if (el.type === 'text') {
+        // Box resize like rectangle: height drives font size; x/y stay top-left
+        const startH = Math.max(8, sp.size || 16);
+        const startW = measureTextWidth(sp.value, startH, sp.font);
+        let x1 = sp.x;
+        let y1 = sp.y;
+        let x2 = sp.x + startW;
+        let y2 = sp.y + startH;
+        if (handle.includes('n')) y1 += dy;
+        if (handle.includes('s')) y2 += dy;
+        if (handle.includes('w')) x1 += dx;
+        if (handle.includes('e')) x2 += dx;
+        if (y2 - y1 < 8) {
+          if (handle.includes('n')) y1 = y2 - 8;
+          else y2 = y1 + 8;
+        }
+        // Keep aspect of glyph width roughly: scale size from height
+        const newSize = Math.max(8, Math.round(y2 - y1));
+        p.size = newSize;
+        p.y = Math.round(y1);
+        // When dragging west/east, move left edge; width follows measured text at new size
+        if (handle.includes('w') && !handle.includes('e')) {
+          const newW = measureTextWidth(sp.value, newSize, sp.font || p.font);
+          p.x = Math.round(x2 - newW);
+        } else {
+          p.x = Math.round(x1);
+        }
+        return;
+      }
+      // rectangle / image / qrcode
+      let x1 = sp.x_start != null ? Math.min(sp.x_start, sp.x_end) : sp.x;
+      let y1 = sp.y_start != null ? Math.min(sp.y_start, sp.y_end) : sp.y;
+      let x2 = sp.x_start != null ? Math.max(sp.x_start, sp.x_end) : sp.x + (sp.width || sp.size || 80);
+      let y2 = sp.y_start != null ? Math.max(sp.y_start, sp.y_end) : sp.y + (sp.height || sp.size || 80);
+      if (handle.includes('n')) y1 += dy;
+      if (handle.includes('s')) y2 += dy;
+      if (handle.includes('w')) x1 += dx;
+      if (handle.includes('e')) x2 += dx;
+      if (y2 - y1 < 8) y2 = y1 + 8;
+      if (x2 - x1 < 8) x2 = x1 + 8;
+      if (el.type === 'rectangle') {
+        p.x_start = Math.round(x1); p.y_start = Math.round(y1);
+        p.x_end = Math.round(x2); p.y_end = Math.round(y2);
+      } else if (el.type === 'qrcode') {
+        const s = Math.round(Math.max(x2 - x1, y2 - y1));
+        p.x = Math.round(x1); p.y = Math.round(y1); p.size = s;
+        delete qrCache[el.id];
+      } else {
+        p.x = Math.round(x1); p.y = Math.round(y1);
+        p.width = Math.round(x2 - x1); p.height = Math.round(y2 - y1);
+        if (el.type === 'image') delete imageQuantCache[el.id];
+      }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const pt = screenToCanvas(e.clientX, e.clientY);
+      const sel = selectedId != null ? elements.find((x) => x.id === selectedId) : null;
+      if (sel) {
+        const h = hitHandle(sel, pt.x, pt.y);
+        if (h) {
+          dragging = { type: 'resize', id: sel.id, handle: h.id, sx: pt.x, sy: pt.y, start: JSON.parse(JSON.stringify(sel.props)) };
+          return;
+        }
+      }
+      const hit = hitTest(pt.x, pt.y);
+      selectedId = hit ? hit.id : null;
+      if (hit) {
+        dragging = { type: 'move', id: hit.id, sx: pt.x, sy: pt.y, start: JSON.parse(JSON.stringify(hit.props)) };
+      }
+      refresh();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const pt = screenToCanvas(e.clientX, e.clientY);
+      const el = elements.find((x) => x.id === dragging.id);
+      if (!el) return;
+      const dx = pt.x - dragging.sx;
+      const dy = pt.y - dragging.sy;
+      const sp = dragging.start;
+      if (dragging.type === 'move') {
+        if (el.type === 'rectangle' || el.type === 'line') {
+          el.props.x_start = sp.x_start + dx; el.props.x_end = sp.x_end + dx;
+          el.props.y_start = sp.y_start + dy; el.props.y_end = sp.y_end + dy;
+        } else {
+          el.props.x = sp.x + dx; el.props.y = sp.y + dy;
+        }
+      } else if (dragging.type === 'resize') {
+        applyResize(el, dragging.handle, dx, dy, sp);
+      }
+      drawScene(false);
+      renderList();
+      scheduleFinalPreview();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (dragging) {
+        dragging = null;
+        refresh();
+        scheduleFinalPreview(true);
+      }
+    });
+
+    wrap.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.1 : 0.9;
+      viewScale = Math.max(0.4, Math.min(6, viewScale * factor));
+      applyCanvasCss();
+    }, { passive: false });
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId != null) {
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+        e.preventDefault();
+        removeElement(selectedId);
+      }
+    });
+
+    /* ───── MAC / memory (shared keys with simple uploader) ───── */
+    const macOctets = [$('mac0'), $('mac1'), $('mac2'), $('mac3')];
+    const MacInput = {
+      read() {
+        const parts = macOctets.map((el) => el.value.trim());
+        const valid = parts.every((p) => /^[0-9a-fA-F]{1,2}$/.test(p));
+        if (!valid) return { valid: false };
+        const octets = parts.map((p) => p.padStart(2, '0').toUpperCase());
+        return { valid: true, octets, name: 'NEMR' + octets.join(''), mac: 'FF:FF:' + octets.join(':') };
+      },
+      setup() {
+        macOctets.forEach((el, idx) => {
+          el.addEventListener('input', () => {
+            el.value = el.value.replace(/[^0-9a-fA-F]/g, '');
+            if (el.value.length >= 2 && idx < macOctets.length - 1) macOctets[idx + 1].focus();
+            LabelMemory.tryApplyForMac();
+          });
+        });
+      },
+    };
+
+    const LabelMemory = {
+      storageKey: 'gicisky-label-by-name',
+      lastMacKey: 'gicisky-last-mac',
+      loadMap() {
+        try { return JSON.parse(localStorage.getItem(this.storageKey)) || {}; } catch (e) { return {}; }
+      },
+      rememberCurrent() {
+        const t = MacInput.read();
+        if (!t.valid) return;
+        const map = this.loadMap();
+        map[t.name] = $('optionsSelect').value;
+        localStorage.setItem(this.storageKey, JSON.stringify(map));
+        localStorage.setItem(this.lastMacKey, t.octets.join('.'));
+      },
+      tryApplyForMac() {
+        const t = MacInput.read();
+        if (!t.valid) return;
+        const saved = this.loadMap()[t.name];
+        if (saved && $('optionsSelect').querySelector(`option[value="${saved}"]`)) {
+          $('optionsSelect').value = saved;
+          updateDeviceHints();
+        }
+      },
+      tryApplyLastMac() {
+        try {
+          const saved = localStorage.getItem(this.lastMacKey);
+          if (!saved || macOctets.some((el) => el.value.trim() !== '')) return;
+          const parts = saved.split('.');
+          if (parts.length === 4) parts.forEach((p, i) => { macOctets[i].value = p; });
+          this.tryApplyForMac();
+        } catch (e) { /* ignore */ }
+      },
+    };
+
+    /* ───── BLE (same protocol as Image Uploader) ───── */
+    const BrowserSupport = {
+      isChrome() {
+        const brands = navigator.userAgentData && navigator.userAgentData.brands;
+        if (brands) {
+          return brands.some((b) => b.brand === 'Google Chrome');
+        }
+        const ua = navigator.userAgent;
+        return /CriOS/.test(ua) || (/Chrome/.test(ua) && !/Edg|OPR|SamsungBrowser/.test(ua));
+      },
+      updateNotice() {
+        const el = $('browserNotice');
+        if (!el) return;
+        el.hidden = this.isChrome();
+      },
+    };
+
+    function setStatus(text) { $('status').innerHTML = text; }
+    function setProgress(percent) {
+      const wrapEl = $('progressWrap');
+      if (percent === null) { wrapEl.style.display = 'none'; return; }
+      wrapEl.style.display = 'block';
+      $('progressBar').style.width = Math.max(0, Math.min(100, Math.round(percent))) + '%';
+      $('progressText').textContent = Math.round(percent) + '%';
+    }
+    function addLog(text) {
+      const now = new Date();
+      const time = String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0') + ':' +
+        String(now.getSeconds()).padStart(2, '0') + ' : ';
+      $('log').innerHTML += time + text + '<br>';
+    }
+    function handleBLEError(error) {
+      console.error(error);
+      setStatus(t('statusError', { error: String(error) }));
+      setProgress(null);
+      BLEManager.disconnect();
+      if (BLEManager.bleDevice && BLEManager.bleDevice.gatt.connected) {
+        BLEManager.bleDevice.gatt.disconnect();
+      }
+    }
+
+    const BLEManager = {
+      bleDevice: null, gattServer: null, bleService: null,
+      writeChar: null, writeImageChar: null, serviceUuid: 0,
+      imgHexData: '', imgHexLength: 0, uploadPartIndex: 0, totalParts: 0,
+      checkSupport() {
+        const el = $('ble-support');
+        if (!navigator.bluetooth) {
+          el.innerHTML = t('bleUnsupported');
+          $('uploadButton').disabled = true;
+        } else {
+          el.innerHTML = '';
+        }
+      },
+      reset() {
+        this.gattServer = null; this.bleService = null;
+        this.writeChar = null; this.writeImageChar = null; this.serviceUuid = 0;
+        this.imgHexData = ''; this.imgHexLength = 0; this.uploadPartIndex = 0; this.totalParts = 0;
+      },
+      async sendCommand(cmd) {
+        await this.writeChar.writeValue(cmd);
+      },
+      async sendCommandHex(cmdHex) {
+        addLog(t('logTx', { data: cmdHex }));
+        await this.sendCommand(Utils.hexToBytes(cmdHex));
+      },
+      async sendImageCommand(cmd) {
+        await this.writeImageChar.writeValue(cmd);
+      },
+      sendImageData() {
+        this.imgHexData = $('pixelData').value.replace(/(?:\r\n|\r|\n|,|0x| )/g, '');
+        this.imgHexLength = this.imgHexData.length;
+        this.uploadPartIndex = 0;
+        this.totalParts = Math.ceil(this.imgHexLength / IMAGE_PART_HEX_LEN);
+        addLog(t('logUpload'));
+        setStatus(t('statusUploadStart'));
+        setProgress(0);
+        this.sendCommandHex('01');
+      },
+      handleImageState(dataHex) {
+        switch (dataHex.substring(0, 2)) {
+          case '01':
+            if (dataHex === '01f400') {
+              const device = getActiveDevice();
+              this.sendCommandHex(GiciskyBle.makeSizeCommandHex(this.imgHexLength / 2, !!(device && device.compression2)));
+            } else addLog(t('logReconnect'));
+            break;
+          case '02':
+            this.sendCommandHex('03');
+            break;
+          case '05':
+            if (dataHex.substring(2, 4) === '08') {
+              addLog(t('logUploadDone'));
+              setStatus(t('statusUploadDone'));
+              setProgress(100);
+              LabelMemory.rememberCurrent();
+              if (this.gattServer && this.gattServer.connected) {
+                if (this.bleDevice && this.bleDevice.gatt.connected) this.bleDevice.gatt.disconnect();
+                this.disconnect();
+              }
+            } else if (dataHex.substring(2, 4) !== '00') {
+              addLog(t('logUploadError'));
+            } else {
+              this.sendNextImagePart(dataHex.substring(4, 12));
+            }
+            break;
+        }
+      },
+      sendNextImagePart(partAckHex) {
+        if (this.imgHexData.length > 0) {
+          let currentPartHex = '';
+          if (partAckHex === Utils.intToHex(this.uploadPartIndex)) {
+            currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, IMAGE_PART_HEX_LEN);
+            this.imgHexData = this.imgHexData.substring(IMAGE_PART_HEX_LEN);
+            this.uploadPartIndex++;
+          } else {
+            currentPartHex = Utils.intToHex(this.uploadPartIndex) + this.imgHexData.substring(0, IMAGE_PART_HEX_LEN);
+          }
+          if (this.totalParts > 0) {
+            const pct = GiciskyBle.progressPercent(this.uploadPartIndex, this.totalParts);
+            setProgress(pct);
+            setStatus(t('statusUploading', {
+              current: this.uploadPartIndex,
+              total: this.totalParts,
+              pct,
+            }));
+          }
+          this.sendImageCommand(Utils.hexToBytes(currentPartHex));
+        }
+      },
+      disconnect() {
+        this.reset();
+        addLog(t('logDisconnected'));
+        $('uploadButton').disabled = false;
+      },
+      handleNotification(data) {
+        addLog(t('logRx', { data: Utils.bytesToHex(data.buffer) }));
+        setTimeout(() => this.handleImageState(Utils.bytesToHex(data.buffer)), 50);
+      },
+      initiateConnection() {
+        $('log').innerHTML = '';
+        $('uploadButton').disabled = true;
+        setProgress(0);
+        setStatus(t('statusSelecting'));
+        if (this.gattServer && this.gattServer.connected) {
+          if (this.bleDevice && this.bleDevice.gatt.connected) this.bleDevice.gatt.disconnect();
+          $('uploadButton').disabled = false;
+          setProgress(null);
+          return;
+        }
+        const target = MacInput.read();
+        const device = getActiveDevice();
+        if (device) addLog(t('logDevice', { model: device.model, mode: '' }));
+        const requestOptions = target.valid
+          ? { filters: [{ namePrefix: target.name }], optionalServices: GiciskyBle.OPTIONAL_SERVICES.slice() }
+          : { filters: [{ manufacturerData: [{ companyIdentifier: GiciskyBle.MANUFACTURER_ID }] }], optionalServices: GiciskyBle.OPTIONAL_SERVICES.slice() };
+        if (target.valid) addLog(t('logTarget', { name: target.name, mac: target.mac }));
+        navigator.bluetooth.requestDevice(requestOptions).then((dev) => {
+          setStatus(t('statusConnecting', { name: dev.name }));
+          dev.addEventListener('gattserverdisconnected', () => this.disconnect());
+          this.bleDevice = dev;
+          this.connect();
+        }).catch(handleBLEError);
+      },
+      connect() {
+        if (this.writeChar) return;
+        addLog(t('logConnecting', { name: this.bleDevice.name }));
+        this.bleDevice.gatt.connect().then((server) => {
+          this.gattServer = server;
+          return this.gattServer.getPrimaryServices();
+        }).then((services) => {
+          services.forEach((service) => {
+            if (this.serviceUuid == 0) {
+              this.serviceUuid = parseInt(service.uuid.substring(4, 8), 16);
+              addLog(t('logServiceUuid', { uuid: service.uuid }));
+            }
+          });
+          return this.gattServer.getPrimaryService(this.serviceUuid);
+        }).then((service) => {
+          this.bleService = service;
+          return this.bleService.getCharacteristic(this.serviceUuid + 2);
+        }).then((characteristic) => {
+          this.writeImageChar = characteristic;
+          return this.bleService.getCharacteristic(this.serviceUuid + 1);
+        }).then((characteristic) => {
+          this.writeChar = characteristic;
+          setTimeout(() => this.sendImageData(), 1000);
+          return this.writeChar.startNotifications().then(() => {
+            this.writeChar.addEventListener('characteristicvaluechanged', (event) => {
+              this.handleNotification(event.target.value);
+            });
+          });
+        }).catch(handleBLEError);
+      },
+    };
+
+    /* ───── layout save / load ───── */
+    const LAYOUT_STORAGE_KEY = 'gicisky-layout-uploader-last';
+
+    function imageToDataUrl(img) {
+      const off = document.createElement('canvas');
+      off.width = img.naturalWidth || img.width;
+      off.height = img.naturalHeight || img.height;
+      off.getContext('2d').drawImage(img, 0, 0);
+      return off.toDataURL('image/png');
+    }
+
+    function loadImageFromDataUrl(dataUrl) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = dataUrl;
+      });
+    }
+
+    async function serializeLayout() {
+      const outElements = [];
+      for (const el of elements) {
+        const item = {
+          type: el.type,
+          props: JSON.parse(JSON.stringify(el.props)),
+        };
+        if (el.type === 'image' && imageCache[el.id]) {
+          try {
+            item.imageDataUrl = imageToDataUrl(imageCache[el.id]);
+          } catch (e) {
+            console.warn('image serialize failed', e);
+          }
+        }
+        outElements.push(item);
+      }
+      return {
+        version: 1,
+        app: 'gicisky-layout-uploader',
+        editorVersion: VERSION,
+        savedAt: new Date().toISOString(),
+        device: $('optionsSelect').value,
+        background: $('bgSelect').value,
+        legacy75: !!( $('legacy75Checkbox') && $('legacy75Checkbox').checked ),
+        elements: outElements,
+      };
+    }
+
+    async function applyLayout(doc) {
+      if (!doc || !Array.isArray(doc.elements)) {
+        throw new Error(t('layout.invalidJson'));
+      }
+      if (doc.device && $('optionsSelect').querySelector(`option[value="${doc.device}"]`)) {
+        $('optionsSelect').value = doc.device;
+      }
+      if (doc.background) $('bgSelect').value = doc.background;
+      if ($('legacy75Checkbox')) $('legacy75Checkbox').checked = !!doc.legacy75;
+
+      currentDevice = getActiveDevice();
+      Object.keys(imageCache).forEach((k) => { delete imageCache[k]; });
+      Object.keys(qrCache).forEach((k) => { delete qrCache[k]; });
+      Object.keys(imageQuantCache).forEach((k) => { delete imageQuantCache[k]; });
+
+      canvas.width = deviceW();
+      canvas.height = deviceH();
+      updateScale();
+
+      elements = [];
+      selectedId = null;
+      nextId = 1;
+
+      for (const item of doc.elements) {
+        if (!item || !item.type || !DEFAULTS[item.type]) continue;
+        const props = Object.assign(
+          JSON.parse(JSON.stringify(DEFAULTS[item.type])),
+          item.props || {}
+        );
+        const el = { id: nextId++, type: item.type, props };
+        if (item.type === 'image' && item.imageDataUrl) {
+          try {
+            imageCache[el.id] = await loadImageFromDataUrl(item.imageDataUrl);
+          } catch (e) {
+            console.warn('image restore failed', e);
+          }
+        }
+        elements.push(el);
+      }
+      if (elements.length) selectedId = elements[elements.length - 1].id;
+
+      const showLegacy = currentDevice && currentDevice.id === 0x012B;
+      $('legacy75Wrap').hidden = !showLegacy;
+      updateDeviceHints();
+      scheduleFinalPreview(true);
+    }
+
+    async function saveLayoutToFile() {
+      const doc = await serializeLayout();
+      const blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      link.href = url;
+      link.download = `gicisky-layout-${stamp}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      try {
+        localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(doc));
+      } catch (e) {
+        console.warn('localStorage save skipped (maybe too large)', e);
+      }
+    }
+
+    async function loadLayoutFromFile(file) {
+      const text = await file.text();
+      const doc = JSON.parse(text);
+      await applyLayout(doc);
+      try {
+        localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(doc));
+      } catch (e) { /* ignore */ }
+    }
+
+    function clearLayout() {
+      if (elements.length && !confirm(t('layout.clearConfirm'))) return;
+      elements = [];
+      selectedId = null;
+      Object.keys(imageCache).forEach((k) => { delete imageCache[k]; });
+      Object.keys(qrCache).forEach((k) => { delete qrCache[k]; });
+      Object.keys(imageQuantCache).forEach((k) => { delete imageQuantCache[k]; });
+      refresh();
+      scheduleFinalPreview(true);
+    }
+    function buildToolbar() {
+      const bar = $('toolbar');
+      bar.innerHTML = '';
+      TOOLBAR.forEach((item) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn';
+        btn.textContent = t(item.labelKey);
+        btn.addEventListener('click', () => addElement(item.type));
+        bar.appendChild(btn);
+      });
+    }
+
+    function syncLangButtons() {
+      const lang = GiciskyI18n.lang;
+      const ko = $('langKo');
+      const en = $('langEn');
+      if (ko) ko.classList.toggle('active', lang === 'ko');
+      if (en) en.classList.toggle('active', lang === 'en');
+    }
+
+    function syncNavLang() {
+      const q = '?lang=' + encodeURIComponent(GiciskyI18n.lang);
+      const simple = $('navSimple');
+      const yaml = $('navYaml');
+      if (simple) simple.href = 'Gicisky_Image_Uploader.html' + q;
+      if (yaml) yaml.href = 'Gicisky_Payload_Editor.html' + q;
+    }
+
+    function onLanguageChange() {
+      syncLangButtons();
+      syncNavLang();
+      populateDeviceSelect();
+      updateDeviceHints();
+      buildToolbar();
+      renderList();
+      renderProps();
+      BLEManager.checkSupport();
+      BrowserSupport.updateNotice();
+      const meta = $('previewMeta');
+      if (meta && !$('pixelData').value) {
+        meta.textContent = t('layout.previewMetaIdle');
+      } else if ($('pixelData').value && currentDevice) {
+        // refresh meta line in current language without recomputing payload
+        try {
+          const kb = (($('pixelData').value.replace(/(?:\r\n|\r|\n|,|0x| )/g, '').length / 2) / 1024).toFixed(1);
+          meta.textContent = t('layout.previewMeta', {
+            model: currentDevice.model,
+            width: canvas.width,
+            height: canvas.height,
+            kb,
+          });
+        } catch (e) { /* ignore */ }
+      }
+    }
+
+    $('optionsSelect').addEventListener('change', () => {
+      updateDeviceHints();
+      LabelMemory.rememberCurrent();
+    });
+    $('bgSelect').addEventListener('change', () => {
+      Object.keys(imageQuantCache).forEach((k) => { delete imageQuantCache[k]; });
+      refresh();
+    });
+    $('legacy75Checkbox').addEventListener('change', () => {
+      updateDeviceHints();
+    });
+
+    $('layoutSaveButton').addEventListener('click', () => {
+      saveLayoutToFile().catch((e) => alert(t('layout.saveFail', { error: e.message })));
+    });
+    $('layoutLoadButton').addEventListener('click', () => $('layoutFileInput').click());
+    $('layoutClearButton').addEventListener('click', () => clearLayout());
+    $('layoutFileInput').addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      loadLayoutFromFile(file).catch((err) => alert(t('layout.loadFail', { error: err.message })));
+    });
+
+    $('saveButton').addEventListener('click', () => {
+      const { quantized } = updateFinalPreview();
+      const off = document.createElement('canvas');
+      off.width = quantized.width;
+      off.height = quantized.height;
+      off.getContext('2d').putImageData(quantized, 0, 0);
+      const link = document.createElement('a');
+      link.href = off.toDataURL('image/png');
+      link.download = 'gicisky-layout.png';
+      link.click();
+    });
+    $('uploadButton').addEventListener('click', () => {
+      updateFinalPreview();
+      if (!$('pixelData').value) {
+        alert(t('layout.noPayload'));
+        return;
+      }
+      BLEManager.initiateConnection();
+    });
+
+    $('langKo').addEventListener('click', () => {
+      GiciskyI18n.setLang('ko', { onChange: onLanguageChange });
+    });
+    $('langEn').addEventListener('click', () => {
+      GiciskyI18n.setLang('en', { onChange: onLanguageChange });
+    });
+
+    window.addEventListener('resize', () => { updateScale(); applyCanvasCss(); });
+
+    GiciskyI18n.init(onLanguageChange);
+    MacInput.setup();
+    BrowserSupport.updateNotice();
+    BLEManager.checkSupport();
+    LabelMemory.tryApplyLastMac();
+    updateDeviceHints();
+    updateFinalPreview();
+    document.querySelector('.app-footer').childNodes[0].textContent = `Version ${VERSION} `;
+  })();
+  </script>
+</body>
+
+</html>
