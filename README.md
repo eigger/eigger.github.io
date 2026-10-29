@@ -1,3 +1,6 @@
+### [BLE ESL Image Uploader — 4.2-inch default](https://eigger.github.io/BLE_ESL_42_Image_Uploader.html)
+Gicisky BWR / Poshiji PSJ BWRY. Automatic tag family selection from the printed label, optional screen sizes, photo dithering, color controls, and Web Bluetooth upload.
+
 ### [Gicisky Image Uploader](https://eigger.github.io/Gicisky_Image_Uploader.html)
 ### [Gicisky Image Uploader (English)](https://eigger.github.io/Gicisky_Image_Uploader_en.html)
 ### [Gicisky Layout Uploader (Expert)](https://eigger.github.io/Gicisky_Layout_Uploader.html) — text/shape/image/QR layout + BLE upload

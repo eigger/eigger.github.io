@@ -225,3 +225,40 @@ test('easyTag discards intermediate notifications but preserves a reply inside t
   const result=await BleEsl.upload(deviceWith({[notifyId]:notify,[writeId]:write}),prepared);
   assert.equal(result.batteryMv,expected.batteryMv);assert.equal(result.temperatureC,expected.temperatureC);
 });
+test('XTE browser defaults pace writes and retain immediate end ACK with trace', async () => {
+  const prepared=await load('xte','psj-213');
+  const notifyId='00002760-08c2-11e1-9073-0e8ac72e0002',writeId='00002760-08c2-11e1-9073-0e8ac72e0001';
+  const notify=new Characteristic(notifyId);let commands=0;const pauses=[],trace=[];
+  const write=new Characteristic(writeId,d=>{
+    if(d[0]===88&&d[3]===1){commands++;const response=wire.xte.command(wire.hex(commands===1?'01ffbd':'04ff'));response[3]=4;notify.emit(response);}
+  });
+  const oldPause=bt.Transport.prototype.pause;
+  bt.Transport.prototype.pause=async function(ms){this.check();pauses.push(ms);};
+  try{await BleEsl.upload(deviceWith({[notifyId]:notify,[writeId]:write}),prepared,{onTrace:e=>trace.push(e)});}
+  finally{bt.Transport.prototype.pause=oldPause;}
+  assert.ok(pauses.filter(ms=>ms===30).length>1);
+  assert.equal(trace.find(e=>e.event==='settings').chunkGapMs,30);assert.equal(trace.find(e=>e.event==='settings').replyTimeoutMs,15000);
+  assert.equal(trace.find(e=>e.event==='reply'&&e.name==='END').hex,'58544504080304ff');
+});
+test('XTE missing finish ACK reports END timeout instead of generic notification timeout', async () => {
+  const prepared=await load('xte','psj-213');
+  const notifyId='00002760-08c2-11e1-9073-0e8ac72e0002',writeId='00002760-08c2-11e1-9073-0e8ac72e0001';
+  const notify=new Characteristic(notifyId);
+  const write=new Characteristic(writeId,d=>{
+    if(d[0]===88&&d[3]===1&&d[6]===1){const response=wire.xte.command(wire.hex('01ffbd'));response[3]=4;notify.emit(response);}
+  });
+  const device=deviceWith({[notifyId]:notify,[writeId]:write});
+  await assert.rejects(BleEsl.upload(device,prepared,{replyTimeoutMs:5}),/XTE END reply/);
+  assert.equal(device.gatt.connected,false);assert.equal(notify.stopped,true);
+});
+test('GATT diagnostics retain replies and counts without logging image packet bytes', async()=>{
+ const trace=[],device=deviceWith({}),t=new bt.Transport(device,{onTrace:e=>trace.push(e)});
+ const char=new Characteristic('command',()=>char.emit(Uint8Array.of(2)));
+ try{
+  await t.subscribe(char);await t.request(char,Uint8Array.of(2,1,0,0,0));
+  await t.request(char,new Uint8Array(244).fill(0xab));
+ }finally{await t.close();}
+ const requests=trace.filter(e=>e.event==='request');
+ assert.equal(requests[0].hex,'0201000000');assert.equal(requests[1].bytes,244);assert.equal(requests[1].hex,undefined);
+ assert.ok(trace.some(e=>e.event==='reply'&&e.hex==='02'));assert.equal(trace.at(-1).event,'closed');
+});
