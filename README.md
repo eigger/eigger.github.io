@@ -4,3 +4,6 @@
 ### [BLE ESL Payload Editor](https://eigger.github.io/BLE_ESL_Payload_Editor.html) — [imagespec](https://github.com/eigger/imagespec) YAML layout editor for [hass-ble-esl](https://github.com/eigger/hass-ble-esl)
 ### [Gicisky Payload Editor](https://eigger.github.io/Gicisky_Payload_Editor.html) — [imagespec](https://github.com/eigger/imagespec) YAML layout editor
 ### [Niimbot Payload Editor](https://eigger.github.io/Niimbot_Payload_Editor.html) — [imagespec](https://github.com/eigger/imagespec) YAML layout editor
+
+### [BLE ESL browser core](ble-esl/README.md)
+Headless image encoding, Web Bluetooth upload and optional advertisement parsing for PickSmart, WOLINK, XTE, easyTag and ETAG. HTML image composition can be added independently.
