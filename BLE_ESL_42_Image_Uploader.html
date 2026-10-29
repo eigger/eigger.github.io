@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko" data-version="261029-7">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Gicisky와 Poshiji 전자라벨에 이미지를 올리세요. 기본 4.2인치, 다른 크기도 선택할 수 있습니다. 라벨 번호를 입력하면 태그 종류를 자동으로 선택합니다.">
+  <title>전자라벨 · 이미지 업로더</title>
+  <link rel="stylesheet" href="ble-esl/uploader.css?v=261029-7">
+</head>
+<body>
+<main class="app">
+  <header class="page-header">
+    <a class="back-link" href="index.html">← eigger tools</a><span class="version-label">v261029-7</span>
+    <div class="eyebrow">ELECTRONIC LABEL <span>4.2″ DEFAULT</span></div>
+    <h1>사진 한 장을,<br>내 전자라벨에.</h1>
+    <p class="intro">라벨 번호를 입력하고 이미지를 골라 주세요.<br>기본은 4.2인치입니다. 다른 크기도 세부 설정에서 고를 수 있어요.</p>
+    <p id="supportNotice" class="notice" role="status" hidden></p>
+  </header>
+
+  <section class="card" aria-labelledby="labelTitle">
+    <div class="section-title"><span class="step">01</span><div><h2 id="labelTitle">라벨 번호 입력</h2><p>제품에 붙어 있는 번호를 그대로 입력하세요.</p></div></div>
+    <label for="labelInput" class="field-label">내 태그의 라벨 번호</label>
+    <input id="labelInput" class="label-input" type="text" placeholder="92.95.75.10 또는 373917109A4F" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="labelHelp labelResult">
+    <p id="labelHelp" class="hint">Gicisky는 점으로 구분된 4칸 번호, Poshiji는 영문·숫자 12자리를 입력하세요.</p>
+    <div id="labelResult" class="tag-result" aria-live="polite"><span class="tag-dot"></span><div><strong id="tagName">번호를 입력하면 태그 종류를 찾아드려요</strong><p id="tagDetails">기본 4.2인치 · 400 × 300 픽셀</p></div></div>
+    <details class="help"><summary>다른 화면 크기 선택</summary><label for="modelSelect" class="field-label">내 태그의 화면 크기</label><select id="modelSelect" disabled><option>라벨 번호를 먼저 입력하세요</option></select><p class="hint">번호로 화면 크기를 알 수는 없어요. 제품 사양과 해상도가 같은 항목을 골라 주세요.</p></details>
+    <details class="help"><summary>번호는 어떻게 입력하나요?</summary><p><strong>Gicisky</strong> <code>92.95.75.10</code> → <code>NEMR92957510</code> 장치를 찾습니다. 기존 업로더처럼 4칸 번호를 사용합니다.</p><p><strong>Poshiji</strong> <code>373917109A4F</code> → 같은 이름의 장치를 찾습니다. 번호 순서를 바꾸지 말고 입력하세요.</p><p>번호 형식으로 제조사를 구분합니다. 화면 크기는 번호로 알 수 없으니, 위에서 고른 <strong>화면 크기와 제품 사양</strong>이 같은지 확인해 주세요.</p></details>
+  </section>
+
+  <section class="card" aria-labelledby="imageTitle">
+    <div class="section-title"><span class="step">02</span><div><h2 id="imageTitle">이미지 고르기</h2><p>사진이나 완성된 이미지를 넣고 표시될 모습을 확인하세요.</p></div></div>
+    <label class="file-button" for="imageInput"><span aria-hidden="true">＋</span> 이미지 선택<input id="imageInput" type="file" accept="image/*"></label>
+    <span id="fileName" class="file-name">선택한 이미지 없음</span>
+    <div class="preview-area"><div class="tag-frame"><canvas id="preview" width="400" height="300" aria-label="전자라벨에 표시될 이미지 미리보기"></canvas><div id="emptyPreview" class="empty-preview"><span aria-hidden="true">▧</span><strong>여기에 이미지가 표시돼요</strong><p>이미지를 선택하면 태그 색상으로 미리 보여드려요.</p></div></div><p class="preview-caption"><span id="paletteText">Gicisky · 흰색 / 검정 / 빨강</span><span id="resolutionText">400 × 300</span></p></div>
+    <p class="hint">이미지를 끌어 위치를 조절하세요. 두 손가락이나 마우스 휠로 확대할 수 있어요.</p>
+    <div class="view-tools"><label class="zoom-label" for="zoom">확대 <output id="zoomValue">100%</output></label><input id="zoom" type="range" min="25" max="400" step="1" value="100"><div class="button-row"><button id="fit" type="button" class="secondary">전체 보기</button><button id="fill" type="button" class="secondary">화면 채우기</button><button id="rotate" type="button" class="secondary">90° 회전</button></div></div>
+    <details class="help advanced"><summary>색상 조절</summary><div class="advanced-fields"><label>색상 변환<select id="dither"><option value="off">선명하게 (글자·그림)</option><option value="floyd">부드럽게 (사진)</option></select></label><p class="hint">사진은 ‘부드럽게’를 선택하세요. 아래 조절은 해당 색으로 바뀌는 양을 늘리거나 줄입니다.</p><label>검정 농도 <output id="blackValue">128</output><input id="blackAmount" aria-label="검정 농도" type="range" min="0" max="255" value="128"></label><label>빨강 농도 <output id="redValue">128</output><input id="redAmount" aria-label="빨강 농도" type="range" min="0" max="255" value="128"></label><label id="yellowWrap" hidden>노랑 농도 <output id="yellowValue">128</output><input id="yellowAmount" aria-label="노랑 농도" type="range" min="0" max="255" value="128"></label><button id="resetColors" class="secondary" type="button">색상 기본값으로</button></div></details>
+  </section>
+
+  <section class="card upload-card" aria-labelledby="uploadTitle">
+    <div class="section-title"><span class="step">03</span><div><h2 id="uploadTitle">태그에 올리기</h2><p>태그를 가까이에 두고 아래 버튼을 눌러 주세요.</p></div></div>
+    <ol class="instructions"><li>블루투스와 위치 권한 요청이 나오면 허용해 주세요.</li><li>열리는 장치 목록에서 <strong id="targetName">입력한 번호의 장치</strong>를 선택하세요.</li><li>업로드가 끝날 때까지 이 화면을 열어 두세요.</li></ol>
+    <div class="upload-actions"><button id="upload" class="primary" type="button" disabled>연결하고 이미지 업로드</button><button id="cancel" class="secondary" type="button" hidden>중단</button><button id="download" class="secondary" type="button" disabled>미리보기 저장</button></div>
+    <p id="readyHint" class="hint">라벨 번호와 이미지를 입력해 주세요.</p>
+    <div id="progressWrap" class="progress-wrap" hidden><progress id="progress" max="100" value="0" aria-label="이미지 전송 진행률"></progress><span id="progressLabel">연결 준비 중</span></div>
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <details id="logDetails" class="help"><summary>디버깅 로그</summary><p class="hint">번호·기종·브라우저와 전송 내역을 기록합니다. 이미지 픽셀은 포함하지 않습니다.</p><div class="button-row"><button id="copyLog" class="secondary" type="button">로그 복사</button><button id="saveLog" class="secondary" type="button">로그 파일 저장</button></div><pre id="log"></pre></details>
+  </section>
+  <footer>이미지는 이 브라우저에서 처리됩니다.<br><a href="Gicisky_Image_Uploader.html">기존 Gicisky 업로더</a><span>·</span><a href="https://github.com/eigger/eigger.github.io">GitHub</a></footer>
+</main>
+<script src="gicisky/compress2.js"></script>
+<script src="ble-esl/models.js"></script>
+<script src="ble-esl/image.js"></script>
+<script src="ble-esl/wire.js"></script>
+<script src="ble-esl/bluetooth.js?v=261029-7"></script>
+<script src="ble-esl/core.js?v=261029-7"></script>
+<script src="ble-esl/label.js?v=261029-7"></script>
+<script src="ble-esl/preview.js?v=261029-7"></script>
+<script src="ble-esl/memory.js?v=261029-7"></script>
+<script src="ble-esl/environment.js?v=261029-7"></script>
+<script src="ble-esl/uploader.js?v=261029-7"></script>
+</body>
+</html>

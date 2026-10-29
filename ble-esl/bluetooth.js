@@ -97,16 +97,17 @@
   }
   class TimeoutError extends Error {}
   class Transport {
-    constructor(device, { signal, writeTimeoutMs = 10000 } = {}) {
+    constructor(device, { signal, writeTimeoutMs = 10000, onTrace } = {}) {
       this.device = device; this.signal = signal; this.writeTimeoutMs = writeTimeoutMs;
-      this.queue = []; this.waiter = null; this.failure = null;
+      this.queue = []; this.waiter = null; this.failure = null; this.writes = 0;
+      this.trace = event => onTrace?.({ component: 'gatt', ...event });
       this.dropped = () => this.fail(new Error('Bluetooth device disconnected'));
       this.aborted = () => this.fail(new DOMException('Aborted', 'AbortError'));
       device.addEventListener('gattserverdisconnected', this.dropped);
       signal?.addEventListener('abort', this.aborted, { once: true });
     }
     check() { if (this.signal?.aborted) throw new DOMException('Aborted', 'AbortError'); if (this.failure) throw this.failure; }
-    fail(error) { this.failure = error; this.waiter?.reject(error); }
+    fail(error) { this.trace({ event: 'failure', error: error.message, writes: this.writes }); this.failure = error; this.waiter?.reject(error); }
     async bounded(promise, ms, label) {
       const operation = Promise.resolve(promise);
       try { this.check(); }
@@ -122,11 +123,13 @@
       try { return await Promise.race([operation, fail]); }
       finally { clearTimeout(timer); this.signal?.removeEventListener('abort', abort); this.device.removeEventListener('gattserverdisconnected', dropped); }
     }
-    async connect() { this.check(); this.server = await this.bounded(this.device.gatt.connect(), 15000, 'connect'); return this; }
+    async connect() { this.check(); this.server = await this.bounded(this.device.gatt.connect(), 15000, 'connect'); this.trace({ event: 'connected' }); return this; }
     async characteristic(service, characteristic) {
       this.check();
       const svc = await this.bounded(this.server.getPrimaryService(service), this.writeTimeoutMs, 'service discovery');
-      return this.bounded(svc.getCharacteristic(characteristic), this.writeTimeoutMs, 'characteristic discovery');
+      const char = await this.bounded(svc.getCharacteristic(characteristic), this.writeTimeoutMs, 'characteristic discovery');
+      this.trace({ event: 'characteristic', service, uuid: char.uuid, write: char.properties?.write, writeWithoutResponse: char.properties?.writeWithoutResponse, notify: char.properties?.notify });
+      return char;
     }
     async read(char) { this.check(); return bytes(await this.bounded(char.readValue(), this.writeTimeoutMs, 'read')); }
     async write(char, data, response = true) {
@@ -134,8 +137,9 @@
       const method = response ? 'writeValueWithResponse' : 'writeValueWithoutResponse';
       if (typeof char[method] !== 'function') throw new Error(`Characteristic cannot ${method}`);
       // A stalled ATT write is fatal. Never treat it as a retryable reply timeout.
+      const number = ++this.writes;
       try { await this.bounded(char[method](data), this.writeTimeoutMs, 'GATT write'); }
-      catch (error) { this.fail(error); throw error; }
+      catch (error) { this.trace({ event: 'write-error', uuid: char.uuid, number, bytes: data.length, response, error: error.message }); this.fail(error); throw error; }
     }
     async subscribe(char) {
       this.check();
@@ -150,6 +154,7 @@
       };
       char.addEventListener('characteristicvaluechanged', this.listener);
       await this.bounded(char.startNotifications(), this.writeTimeoutMs, 'subscribe');
+      this.trace({ event: 'subscribed', uuid: char.uuid });
     }
     clear() { const old = this.queue; this.queue = []; return old; }
     async next(ms = 10000) {
@@ -169,7 +174,12 @@
       }
     }
     async request(char, data, ms = 10000, response = false) {
-      this.clear(); await this.write(char, data, response); return this.next(ms);
+      const hex = frame => Array.from(frame.slice(0, 64), b => b.toString(16).padStart(2, '0')).join('');
+      this.trace({ event: 'request', uuid: char.uuid, bytes: data.length, timeoutMs: ms, ...(char === this.notify && data.length <= 16 ? { hex: hex(data) } : {}) });
+      this.clear(); await this.write(char, data, response);
+      const reply = await this.next(ms);
+      this.trace({ event: 'reply', uuid: char.uuid, bytes: reply.length, hex: hex(reply) });
+      return reply;
     }
     async pause(ms) { await this.bounded(new Promise(resolve => setTimeout(resolve, ms)), ms + 1000, 'pacing'); this.check(); }
     async close() {
@@ -182,6 +192,7 @@
         }
       }
       this.device.gatt.disconnect();
+      this.trace({ event: 'closed', writes: this.writes });
     }
   }
   api.bluetooth = { services, manufacturers, requestOptions, capabilities, parseAdvertisement, watchAdvertisements, scanAdvertisements, Transport, TimeoutError, bytes };

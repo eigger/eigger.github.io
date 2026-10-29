@@ -81,18 +81,39 @@
     const notify = await t.characteristic(service, '00002760-08c2-11e1-9073-0e8ac72e0002');
     // Web Bluetooth exposes no negotiated MTU. 20 bytes is the safe default.
     const size = options.chunkSize ?? 20;
+    // Browser write-without-response resolves when queued, not when the tag consumes it.
+    const gap = options.chunkGapMs ?? 30;
+    const replyTimeout = options.replyTimeoutMs ?? 15000;
+    let chunks = 0;
+    const trace = event => options.onTrace?.({ protocol: 'xte', ...event });
+    const toHex = frame => Array.from(frame, b => b.toString(16).padStart(2, '0')).join('');
+    trace({ event: 'settings', chunkSize: size, chunkGapMs: gap, bytes: prepared.payload.length, replyTimeoutMs: replyTimeout });
     const send = async frame => {
-      for (let i = 0; i < frame.length; i += size) { await t.write(write, frame.slice(i, i + size), false); if (options.chunkGapMs) await t.pause(options.chunkGapMs); }
+      for (let i = 0; i < frame.length; i += size) { await t.write(write, frame.slice(i, i + size), false); chunks++; if (gap) await t.pause(gap); }
       if (options.pacingMs) await t.pause(options.pacingMs);
     };
     const command = async (payload, expected) => {
+      const name = payload[0] === 1 ? 'START' : 'END';
+      trace({ event: 'command', name, hex: toHex(wire.xte.command(payload)), chunks });
       t.clear(); await send(wire.xte.command(payload));
-      await t.waitFor(reply => wire.xte.check(reply, expected), 5000);
+      try {
+        await t.waitFor(reply => {
+          trace({ event: 'reply', name, hex: toHex(reply) });
+          return wire.xte.check(reply, expected);
+        }, replyTimeout);
+      } catch (error) {
+        if (error instanceof bt.TimeoutError && !t.failure) error.message = `Timed out: XTE ${name} reply (${replyTimeout}ms; ${chunks} writes)`;
+        throw error;
+      }
     };
     await t.subscribe(notify); await t.pause(500);
     await command(cat(one(1), wire.u32(prepared.payload.length)), wire.hex('01ffbd'));
     const frames = wire.xte.blocks(prepared.payload);
-    for (let i = 0; i < frames.length; i++) { await send(frames[i]); progress(options, 'transfer', i + 1, frames.length); }
+    for (let i = 0; i < frames.length; i++) {
+      const started = Date.now(); await send(frames[i]);
+      trace({ event: 'block', number: i + 1, total: frames.length, bytes: frames[i].length, checksum: frames[i][6], chunks, elapsedMs: Date.now() - started });
+      progress(options, 'transfer', i + 1, frames.length);
+    }
     progress(options, 'finish');
     await command(wire.hex('0400'), wire.hex('04ff'));
     return {};
@@ -162,6 +183,7 @@
         throw new Error(`${prepared.protocol} chunkSize must be ${min}..${max}`);
       }
     }
+    if (options.replyTimeoutMs !== undefined && (!Number.isFinite(options.replyTimeoutMs) || options.replyTimeoutMs <= 0 || options.replyTimeoutMs > 120000)) throw new Error('Invalid replyTimeoutMs');
     busy.add(device);
     const transport = new bt.Transport(device, options);
     try {
