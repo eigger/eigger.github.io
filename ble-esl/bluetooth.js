@@ -25,7 +25,7 @@
     return {
       ...(acceptAllDevices ? { acceptAllDevices: true } : { filters: protocol ? filters[protocol] : Object.values(filters).flat() }),
       optionalServices: protocol ? services[protocol] : Object.values(services).flat(),
-      optionalManufacturerData: protocol && manufacturers[protocol] ? [manufacturers[protocol]] : Object.values(manufacturers),
+      optionalManufacturerData: protocol ? (manufacturers[protocol] ? [manufacturers[protocol]] : []) : Object.values(manufacturers),
     };
   }
   function capabilities(device, bluetooth = global.navigator?.bluetooth) {

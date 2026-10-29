@@ -57,7 +57,9 @@ async function onUploadClick() {
 `prepare(protocol, modelKey, imageData, options)`는 BLE에 접근하지 않습니다.
 `upload(device, prepared, options)`는 연결 후 전송하고 성공·실패·중단 시 연결과
 알림 구독을 정리합니다. 동일한 장치로 동시 업로드를 시도하면 거부합니다.
-성공은 프로토콜별 완료 응답을 확인한 뒤에만 반환합니다. 오류는 throw합니다.
+성공은 프로토콜별 완료 응답을 확인한 뒤에만 반환합니다. 오류는 throw합니다. 명시한 모델과 광고 모델이 다르면 `Model mismatch` 오류가 나며,
+광고에서 자동 선택하려면 `modelKey`를 `undefined`로 전달합니다.
+`chunkSize` 범위는 연결·인증 전에 검사합니다.
 자동 재시도는 하지 않으며, PickSmart의 START 재탐색 및 같은 파트 재요청만 처리합니다.
 `onProgress`의 `transfer: 100%`는 데이터 전송 단계 완료입니다. 최종 성공은
 `complete` 또는 `upload()` 반환값으로 판단합니다. 콜백에서는 예외를 던지지 마세요.
@@ -109,8 +111,8 @@ Chrome 공식 스캔 예제는 실험 웹 플랫폼 기능 플래그를 요구�
 
 `requestDevice()`는 처음부터 `optionalManufacturerData: [0x5053, 0xBBAA, 0x5258]`
 및 필요한 서비스 접근 권한을 요청합니다. 프로토콜을 지정하면 해당 범위로 좁힙니다.
-이름 필터나 `acceptAllDevices`만으로 선택한 경우에도 제조사 데이터 접근 권한이
-필요합니다. `BleEsl.bluetooth.requestOptions()`를 사용해 동일한 옵션을 받을 수 있습니다.
+easyTag/ETAG를 지정하면 제조사 데이터 권한은 빈 목록입니다.
+제조사 데이터를 읽으려면 이름 필터나 `acceptAllDevices`로 선택해도 해당 권한이 필요합니다. `BleEsl.bluetooth.requestOptions()`를 사용해 동일한 옵션을 받을 수 있습니다.
 
 ```js
 // 클릭 이벤트에서 장치를 먼저 선택한다. 광고 수신에는 GATT 연결이 필요하지 않다.
@@ -121,7 +123,8 @@ if (bt.capabilities(device).watchAdvertisements) {
     console.log(info.protocol, info.modelKey, info.batteryMv, info.batteryPercent);
     console.log(info.manufacturerData, info.serviceData, info.rssi, info.raw);
     // 나중에 prepare(..., { advertisement: info })에 전달하면
-    // 확인된 모델과 PickSmart 펌웨어별 인코딩을 반영한다.
+    // 명시한 modelKey와 광고 모델이 다르면 오류. 자동 선택은 modelKey를 undefined로 전달한다.
+    // 같은 모델의 PickSmart 펌웨어별 인코딩은 반영한다.
   });
   // 종료: stop(); 또는 옵션 { signal }로 중단
 }
@@ -171,3 +174,16 @@ QuickLZ, 팔레트 변환, 패딩, 회전·미러를 포함합니다. WOLINK 압
 동일성 대신 블록별 압축 해제 결과를 검증합니다. 첫 번째 검증은 다섯 프로토콜의
 가짜 GATT 세션, 오류·중단·연결 종료, 광고 파싱·수신 수명 주기를 검증합니다.
 실제 브라우저/태그에서의 전송·광고 수신 검증은 별도로 필요합니다.
+
+### 완료 알림의 식별 한계
+
+WOLINK는 원본과 동일하게 오류 없는 `00`(idle) 또는 `FF`(refresh finished)를
+refresh 이후 완료 상태로 인정합니다. 전송 중 상태는 busy라는 원본의 전제를 따릅니다.
+상태 프레임에 명령 ID가 없어, 마지막 데이터 처리의 늦은 idle이 실제로 발생한다면
+refresh 응답과 구분할 수 없습니다. 큐 비우기나 고정 지연만으로 해결됐다고 보장할 수
+없으며, 이 부분은 실기기 로그에서 전송/refresh별 상태를 확인해야 합니다.
+
+easyTag는 마지막 패킷을 쓰기 직전에 이전 알림을 제외하고, 마지막 쓰기 중이나 이후에
+수신한 응답은 보존합니다. 전송이 끝난 뒤 큐를 비우면 정상 완료 응답까지 잃으므로
+그렇게 처리하지 않습니다. 원본 응답에는 검증된 명령/요청 ID 판별 규칙이 없어,
+마지막 쓰기 이후 도착하는 무관한 알림까지 확실히 구분한다고 보장하지 않습니다.

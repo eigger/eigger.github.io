@@ -78,39 +78,39 @@
       if (rot === 270) { nx = height - 1 - y; ny = x; }
       if (extra.mirror_x) nx = w - 1 - nx;
       if (extra.mirror_y) ny = h - 1 - ny;
-      out.set(data.subarray((y * width + x) * 4, (y * width + x) * 4 + 4), (ny * w + nx) * 4);
+      const src = (y * width + x) * 4, dst = (ny * w + nx) * 4;
+      for (let c = 0; c < 4; c++) out[dst + c] = data[src + c];
     }
     return { data: out, width: w, height: h };
   }
-  function nearest(rgb, palette) {
+  function nearest(data, offset, palette) {
     let best = 0, distance = Infinity;
-    palette.forEach((color, i) => {
-      const d = color.reduce((sum, v, c) => sum + (v - rgb[c]) ** 2, 0);
+    for (let i = 0; i < palette.length; i++) {
+      const color = palette[i];
+      const d = (color[0] - data[offset]) ** 2 + (color[1] - data[offset + 1]) ** 2 + (color[2] - data[offset + 2]) ** 2;
       if (d < distance) { distance = d; best = i; }
-    });
+    }
     return best;
+  }
+  function spread(data, index, error, weight) {
+    data[index] = Math.max(0, Math.min(255, data[index] + (error * weight >> 4)));
   }
   function codes(image, palette, dither = false) {
     const { width: w, height: h } = image;
     const data = new Int32Array(image.data), out = new Uint8Array(w * h);
-    const clamp = v => Math.max(0, Math.min(255, v));
     // easyTag's diffusion is column-first, including its intentional y > 1 rule.
     for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) {
       const i = (y * w + x) * 4;
-      const code = nearest(data.subarray(i, i + 3), palette);
+      const code = nearest(data, i, palette);
       out[y * w + x] = code;
       if (!dither) continue;
       for (let c = 0; c < 3; c++) {
         const error = data[i + c] - palette[code][c];
-        const spread = (nx, ny, weight) => {
-          const j = (ny * w + nx) * 4 + c;
-          data[j] = clamp(data[j] + (error * weight >> 4));
-        };
-        if (y + 1 < h) spread(x, y + 1, 7);
+        if (y + 1 < h) spread(data, i + w * 4 + c, error, 7);
         if (x + 1 < w) {
-          if (y > 1) spread(x + 1, y - 1, 3);
-          spread(x + 1, y, 5);
-          if (y + 1 < h) spread(x + 1, y + 1, 1);
+          if (y > 1) spread(data, i + 4 - w * 4 + c, error, 3);
+          spread(data, i + 4 + c, error, 5);
+          if (y + 1 < h) spread(data, i + 4 + w * 4 + c, error, 1);
         }
       }
     }

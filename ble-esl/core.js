@@ -5,7 +5,12 @@
   const cat = (...a) => api.concat(...a), one = n => Uint8Array.of(n);
   const copy = value => JSON.parse(JSON.stringify(value));
   function presetFor(protocol, key, advertisement) {
-    const modelKey = advertisement?.protocol === protocol && advertisement.modelKey ? advertisement.modelKey : key;
+    if (advertisement?.protocol && advertisement.protocol !== protocol) throw new Error('Advertisement protocol does not match');
+    const advertisedKey = advertisement?.protocol === protocol ? advertisement.modelKey : null;
+    if (key != null && advertisedKey && key !== advertisedKey) {
+      throw new Error(`Model mismatch: selected ${key}, advertised ${advertisedKey}`);
+    }
+    const modelKey = key ?? advertisedKey;
     const preset = api.models[protocol]?.find(p => p.key === modelKey);
     if (!preset) throw new Error(`Unknown ${protocol} model: ${modelKey}`);
     const out = copy(preset);
@@ -14,7 +19,6 @@
     return out;
   }
   async function prepare(protocol, key, imageData, options = {}) {
-    if (options.advertisement?.protocol && options.advertisement.protocol !== protocol) throw new Error('Advertisement protocol does not match');
     const preset = presetFor(protocol, key, options.advertisement);
     const raw = api.image.encode(protocol, imageData, preset);
     let payload = raw;
@@ -77,7 +81,6 @@
     const notify = await t.characteristic(service, '00002760-08c2-11e1-9073-0e8ac72e0002');
     // Web Bluetooth exposes no negotiated MTU. 20 bytes is the safe default.
     const size = options.chunkSize ?? 20;
-    if (!Number.isInteger(size) || size < 20 || size > 244) throw new Error('XTE chunkSize must be 20..244');
     const send = async frame => {
       for (let i = 0; i < frame.length; i += size) { await t.write(write, frame.slice(i, i + size), false); if (options.chunkGapMs) await t.pause(options.chunkGapMs); }
       if (options.pacingMs) await t.pause(options.pacingMs);
@@ -100,6 +103,8 @@
     const notify = await t.characteristic(service, '00001526-1212-efde-1523-785feabcd123');
     await t.subscribe(notify); await t.pause(800); t.clear();
     for (let i = 0; i < prepared.payload.length; i++) {
+      // Arm before the final write: its reply can arrive before the write resolves.
+      if (i === prepared.payload.length - 1) t.clear();
       await t.write(write, prepared.payload[i], false);
       progress(options, 'transfer', i + 1, prepared.payload.length);
       await t.pause(20 + (options.pacingMs || 0) + (i % 5 === 0 ? 3 : 0));
@@ -132,7 +137,6 @@
     await t.subscribe(status);
     const payload = prepared.payload.data;
     const size = options.chunkSize ?? 200;
-    if (!Number.isInteger(size) || size < 1 || size > 506) throw new Error('WOLINK chunkSize must be 1..506');
     for (let i = 0; i < payload.length; i += size) {
       await t.write(data, wire.wolink.data(i, payload.slice(i, i + size)));
       for (const frame of t.clear()) wire.wolink.check(frame);
@@ -152,6 +156,12 @@
     if (busy.has(device)) throw new Error('An upload is already running for this device');
     if (!device?.gatt) throw new Error('A Web Bluetooth device with GATT is required');
     for (const name of ['pacingMs', 'chunkGapMs']) if (options[name] !== undefined && (!Number.isFinite(options[name]) || options[name] < 0)) throw new Error(`Invalid ${name}`);
+    if (options.chunkSize !== undefined && ['xte', 'wolink'].includes(prepared.protocol)) {
+      const [min, max] = prepared.protocol === 'xte' ? [20, 244] : [1, 506];
+      if (!Number.isInteger(options.chunkSize) || options.chunkSize < min || options.chunkSize > max) {
+        throw new Error(`${prepared.protocol} chunkSize must be ${min}..${max}`);
+      }
+    }
     busy.add(device);
     const transport = new bt.Transport(device, options);
     try {

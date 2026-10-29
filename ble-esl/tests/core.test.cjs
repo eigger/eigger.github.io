@@ -38,7 +38,7 @@ test('advertisements: DataView offsets, models, firmware override, malformed and
   const record = Uint8Array.of(99, 0x2b, 30, 0x81, 1, 1, 99);
   const ad = bt.parseAdvertisement({ manufacturerData: new Map([[0x5053, new DataView(record.buffer, 1, 5)]]) });
   assert.equal(ad.batteryMv, 3000); assert.equal(ad.modelKey, '0x012B');
-  assert.equal(BleEsl.getPreset('picksmart', '0x004B', ad).extra.encoding, 'lines');
+  assert.equal(BleEsl.getPreset('picksmart', undefined, ad).extra.encoding, 'lines');
   assert.equal(ad.manufacturerData.get(0x5053).length, 5);
   const xte = bt.parseAdvertisement({ manufacturerData: new Map([[0x5258, Uint8Array.of(0xfd,1,0x12,3,0,153,80,0x21)]]) });
   assert.equal(xte.modelKey, 'psj-420'); assert.equal(xte.batteryPercent, 80);
@@ -197,4 +197,31 @@ test('aborted cleanup disconnects without launching another GATT operation', asy
   // Even an operation already started by a caller must have its rejection consumed.
   await assert.rejects(t.bounded(Promise.reject(new Error('late GATT failure')), 10, 'late'), { name: 'AbortError' });
   await new Promise(resolve => setImmediate(resolve));
+});
+test('explicit model conflicts fail instead of silently changing the panel', async () => {
+  const advertisement = {protocol:'picksmart',modelKey:'0x004E',raw:{}};
+  assert.throws(() => BleEsl.getPreset('picksmart','0x004B',advertisement), /Model mismatch/);
+  await assert.rejects(load('picksmart','0x004B',{advertisement}), /Model mismatch/);
+  assert.equal(BleEsl.getPreset('picksmart',undefined,advertisement).key,'0x004E');
+});
+test('name-only protocol selection requests no manufacturer records', () => {
+  for (const protocol of ['easytag','etag']) assert.deepEqual(bt.requestOptions(protocol).optionalManufacturerData, []);
+  assert.deepEqual(bt.requestOptions('wolink').optionalManufacturerData,[0xbbaa]);
+});
+test('invalid protocol chunk sizes fail before connecting or unlocking', async () => {
+  for (const [protocol,key,chunkSize] of [['wolink','154',0],['xte','psj-420',245]]) {
+    const prepared = await load(protocol,key), device = deviceWith({}); let connections=0;
+    device.gatt.connect=async()=>{connections++;throw new Error('must not connect');};
+    await assert.rejects(BleEsl.upload(device,prepared,{chunkSize}), /chunkSize/);
+    assert.equal(connections,0);
+  }
+});
+test('easyTag discards intermediate notifications but preserves a reply inside the final write', async () => {
+  const prepared=await load('easytag','33',{mac:'AA:BB:CC:DD:EE:FF'});let writes=0;
+  const notifyId='00001526-1212-efde-1523-785feabcd123',writeId='00001525-1212-efde-1523-785feabcd123';
+  const notify=new Characteristic(notifyId);
+  const finalFrame=Uint8Array.of(1,1,1,1), expected=wire.easytag.reply(prepared.mac,finalFrame);
+  const write=new Characteristic(writeId,()=>notify.emit(++writes===prepared.payload.length ? finalFrame : Uint8Array.of(2,2,2,2)));
+  const result=await BleEsl.upload(deviceWith({[notifyId]:notify,[writeId]:write}),prepared);
+  assert.equal(result.batteryMv,expected.batteryMv);assert.equal(result.temperatureC,expected.temperatureC);
 });
