@@ -147,3 +147,54 @@ test('transport handles abort, disconnect, timeout, and notification copy', asyn
   const t2=new bt.Transport(device); const p=t2.next(1000); device.dispatchEvent(new Event('gattserverdisconnected')); await assert.rejects(p,/disconnected/); await t2.close();
   const t3=new bt.Transport(device); await assert.rejects(t3.next(1),bt.TimeoutError); await t3.close();
 });
+test('WOLINK preserves errors received during final upload pacing', async () => {
+  const prepared = await load('wolink', '154');
+  const authId='33323032-4c53-4545-4c42-4b4e494c4f57', dataId='31323032-4c53-4545-4c42-4b4e494c4f57', statusId='34323032-4c53-4545-4c42-4b4e494c4f57';
+  const auth = new Characteristic(authId, undefined, new Uint8Array(16));
+  const status = new Characteristic(statusId);
+  let lastPacket = false, refreshed = false;
+  const data = new Characteristic(dataId, packet => {
+    if (packet[0] === 2) { refreshed = true; status.emit(Uint8Array.of(255, 0)); }
+    else {
+      const offset = new DataView(packet.buffer, packet.byteOffset).getUint32(2, true);
+      lastPacket = offset + packet.length - 6 === prepared.payload.data.length;
+    }
+  });
+  const pause = bt.Transport.prototype.pause;
+  bt.Transport.prototype.pause = async function () {
+    this.check();
+    if (lastPacket) status.emit(Uint8Array.of(1, 2));
+  };
+  const device = deviceWith({[authId]:auth,[dataId]:data,[statusId]:status});
+  try { await assert.rejects(BleEsl.upload(device, prepared, {pacingMs:1}), /WOLINK device error 2/); }
+  finally { bt.Transport.prototype.pause = pause; }
+  assert.equal(refreshed, false);
+  assert.equal(status.stopped, true);
+  assert.equal(device.gatt.connected, false);
+});
+test('transport queues burst notifications while a reader is pending', async () => {
+  const device = deviceWith({}), t = new bt.Transport(device), char = new Characteristic('notify');
+  try {
+    await t.subscribe(char);
+    const pending = t.next(1000);
+    const backing = Uint8Array.of(99, 1, 99);
+    char.emit(backing.subarray(1, 2));
+    backing[1] = 9;
+    char.emit(Uint8Array.of(2));
+    assert.deepEqual([...await pending], [1]);
+    assert.deepEqual([...await t.next(10)], [2]);
+  } finally { await t.close(); }
+});
+test('aborted cleanup disconnects without launching another GATT operation', async () => {
+  const device = deviceWith({}), controller = new AbortController();
+  const t = new bt.Transport(device, { signal: controller.signal }), char = new Characteristic('notify');
+  let unsubscribeCalls = 0;
+  char.stopNotifications = async () => { unsubscribeCalls++; throw new Error('GATT operation already in progress'); };
+  await t.connect(); await t.subscribe(char); controller.abort();
+  await t.close();
+  assert.equal(unsubscribeCalls, 0);
+  assert.equal(device.gatt.connected, false);
+  // Even an operation already started by a caller must have its rejection consumed.
+  await assert.rejects(t.bounded(Promise.reject(new Error('late GATT failure')), 10, 'late'), { name: 'AbortError' });
+  await new Promise(resolve => setImmediate(resolve));
+});

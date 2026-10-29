@@ -108,7 +108,9 @@
     check() { if (this.signal?.aborted) throw new DOMException('Aborted', 'AbortError'); if (this.failure) throw this.failure; }
     fail(error) { this.failure = error; this.waiter?.reject(error); }
     async bounded(promise, ms, label) {
-      this.check();
+      const operation = Promise.resolve(promise);
+      try { this.check(); }
+      catch (error) { operation.catch(() => {}); throw error; }
       let timer, abort, dropped;
       const fail = new Promise((_, reject) => {
         timer = setTimeout(() => reject(new TimeoutError(`Timed out: ${label}`)), ms);
@@ -117,7 +119,7 @@
         dropped = () => reject(new Error('Bluetooth device disconnected'));
         this.device.addEventListener('gattserverdisconnected', dropped, { once: true });
       });
-      try { return await Promise.race([promise, fail]); }
+      try { return await Promise.race([operation, fail]); }
       finally { clearTimeout(timer); this.signal?.removeEventListener('abort', abort); this.device.removeEventListener('gattserverdisconnected', dropped); }
     }
     async connect() { this.check(); this.server = await this.bounded(this.device.gatt.connect(), 15000, 'connect'); return this; }
@@ -136,10 +138,15 @@
       catch (error) { this.fail(error); throw error; }
     }
     async subscribe(char) {
+      this.check();
       this.notify = char;
       this.listener = event => {
         const data = bytes(event.target.value);
-        if (this.waiter) this.waiter.resolve(data); else this.queue.push(data);
+        if (this.waiter) {
+          const waiter = this.waiter;
+          this.waiter = null;
+          waiter.resolve(data);
+        } else this.queue.push(data);
       };
       char.addEventListener('characteristicvaluechanged', this.listener);
       await this.bounded(char.startNotifications(), this.writeTimeoutMs, 'subscribe');
@@ -170,7 +177,7 @@
       this.signal?.removeEventListener('abort', this.aborted);
       if (this.notify) {
         this.notify.removeEventListener('characteristicvaluechanged', this.listener);
-        if (this.device.gatt.connected) {
+        if (this.device.gatt.connected && !this.failure && !this.signal?.aborted) {
           try { await this.bounded(this.notify.stopNotifications(), 1000, 'unsubscribe'); } catch { /* disconnect also removes subscription */ }
         }
       }

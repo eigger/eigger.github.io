@@ -139,7 +139,8 @@
       progress(options, 'transfer', Math.min(i + size, payload.length), payload.length);
       if (options.pacingMs) await t.pause(options.pacingMs);
     }
-    t.clear(); progress(options, 'finish');
+    for (const frame of t.clear()) wire.wolink.check(frame);
+    progress(options, 'finish');
     await t.write(data, wire.wolink.refresh(payload.length));
     const timeout = prepared.payload.rawSize > 100000 ? 120000 : prepared.payload.rawSize > 20000 ? 60000 : 30000;
     await t.waitFor(wire.wolink.check, timeout);
